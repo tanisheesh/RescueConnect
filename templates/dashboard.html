@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - RescueConnect{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        <div class="user-info">
+            <span id="userGreeting">Welcome back!</span>
+            <span class="user-type" id="userType"></span>
+        </div>
+    </div>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card" id="volunteerStats" style="display: none;">
+            <div class="stat-icon">
+                <i class="fas fa-hands-helping"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="myAssignments">0</div>
+                <div class="stat-label">Active Assignments</div>
+            </div>
+        </div>
+        
+        <div class="stat-card" id="organizationStats" style="display: none;">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="myRequests">0</div>
+                <div class="stat-label">Active Requests</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-certificate"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="mySkills">0</div>
+                <div class="stat-label">Verified Skills</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="recentActivity">0</div>
+                <div class="stat-label">Recent Activities</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-content">
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Quick Actions</h2>
+            </div>
+            <div class="quick-actions">
+                <a href="/skills" class="action-card">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Manage Skills</span>
+                </a>
+                <a href="/emergency" class="action-card" id="emergencyAction">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="emergencyActionText">View Emergencies</span>
+                </a>
+                <a href="#" class="action-card" onclick="updateLocation()">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Update Location</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2 id="recentSectionTitle">Recent Activity</h2>
+            </div>
+            <div class="activity-list" id="activityList">
+                <div class="activity-item loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading activities...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section" id="emergencySection">
+            <div class="section-header">
+                <h2 id="emergencyListTitle">Available Emergencies</h2>
+                <button class="btn btn-primary btn-small" id="refreshEmergencies">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="emergency-list" id="emergencyList">
+                <div class="emergency-item loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading emergency requests...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check authentication
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (!token || !user) {
+        window.location.href = '/login';
+        return;
+    }
+    
+    currentUser = JSON.parse(user);
+    
+    // Redirect to role-specific dashboard
+    if (window.location.pathname === '/dashboard') {
+        switch(currentUser.user_type) {
+            case 'volunteer':
+                window.location.href = '/volunteer-dashboard';
+                return;
+            case 'organization':
+                window.location.href = '/organization-dashboard';
+                return;
+            case 'admin':
+                window.location.href = '/admin-dashboard';
+                return;
+        }
+    }
+    
+    initializeDashboard();
+    loadDashboardData();
+});
+
+function initializeDashboard() {
+    // Update user greeting
+    document.getElementById('userGreeting').textContent = `Welcome back, ${currentUser.full_name}!`;
+    document.getElementById('userType').textContent = currentUser.user_type.charAt(0).toUpperCase() + currentUser.user_type.slice(1);
+    
+    // Show/hide sections based on user type
+    if (currentUser.user_type === 'volunteer') {
+        document.getElementById('volunteerStats').style.display = 'block';
+        document.getElementById('emergencyActionText').textContent = 'Browse Emergencies';
+        document.getElementById('emergencyListTitle').textContent = 'Available Emergency Requests';
+    } else if (currentUser.user_type === 'organization') {
+        document.getElementById('organizationStats').style.display = 'block';
+        document.getElementById('emergencyActionText').textContent = 'Create Emergency';
+        document.getElementById('emergencyListTitle').textContent = 'My Emergency Requests';
+        document.getElementById('recentSectionTitle').textContent = 'Recent Requests';
+    }
+}
+
+async function loadDashboardData() {
+    const token = localStorage.getItem('token');
+    
+    try {
+        // Load user skills
+        const skillsResponse = await fetch('/api/user/skills', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (skillsResponse.ok) {
+            const skillsData = await skillsResponse.json();
+            document.getElementById('mySkills').textContent = skillsData.skills.length;
+        }
+        
+        // Load emergency requests
+        const emergencyResponse = await fetch('/api/emergency/requests', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (emergencyResponse.ok) {
+            const emergencyData = await emergencyResponse.json();
+            displayEmergencyRequests(emergencyData.requests);
+            
+            if (currentUser.user_type === 'organization') {
+                document.getElementById('myRequests').textContent = emergencyData.requests.length;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Error loading dashboard data', 'error');
+    }
+}
+
+function displayEmergencyRequests(requests) {
+    const emergencyList = document.getElementById('emergencyList');
+    
+    if (requests.length === 0) {
+        emergencyList.innerHTML = '<div class="no-data">No emergency requests found</div>';
+        return;
+    }
+    
+    emergencyList.innerHTML = requests.map(request => `
+        <div class="emergency-item priority-${request.priority_level}">
+            <div class="emergency-header">
+                <h3>${request.title}</h3>
+                <span class="priority-badge priority-${request.priority_level}">${request.priority_level.toUpperCase()}</span>
+            </div>
+            <div class="emergency-details">
+                <p>${request.description}</p>
+                <div class="emergency-meta">
+                    <span><i class="fas fa-map-marker-alt"></i> ${request.address}</span>
+                    <span><i class="fas fa-users"></i> ${request.volunteers_assigned}/${request.volunteers_needed} volunteers</span>
+                    <span><i class="fas fa-clock"></i> ${new Date(request.created_at).toLocaleDateString()}</span>
+                </div>
+                ${request.required_skills ? `<div class="required-skills">
+                    <strong>Required Skills:</strong> ${request.required_skills}
+                </div>` : ''}
+            </div>
+            <div class="emergency-actions">
+                <button class="btn btn-primary btn-small" onclick="viewEmergencyDetails(${request.id})">
+                    View Details
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function viewEmergencyDetails(requestId) {
+    window.location.href = `/emergency?id=${requestId}`;
+}
+
+function updateLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async function(position) {
+            const token = localStorage.getItem('token');
+            
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    })
+                });
+                
+                if (response.ok) {
+                    showNotification('Location updated successfully!', 'success');
+                } else {
+                    showNotification('Failed to update location', 'error');
+                }
+            } catch (error) {
+                showNotification('Error updating location', 'error');
+            }
+        }, function(error) {
+            showNotification('Unable to get location', 'error');
+        });
+    } else {
+        showNotification('Geolocation is not supported', 'error');
+    }
+}
+
+document.getElementById('refreshEmergencies').addEventListener('click', loadDashboardData);
+</script>
+{% endblock %}

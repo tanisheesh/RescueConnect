@@ -1,0 +1,1178 @@
+{% extends "base.html" %}
+
+{% block title %}My Applications - RescueConnect{% endblock %}
+
+{% block content %}
+<div class="applications-container">
+    <div class="applications-header">
+        <h1>My Applications</h1>
+        <div class="header-actions">
+            <a href="/dashboard" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <button class="btn btn-primary" id="refreshApplications">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="applications-stats">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-paper-plane"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="totalApplications">0</div>
+                <div class="stat-label">Total Applications</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="pendingApplications">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="approvedApplications">0</div>
+                <div class="stat-label">Approved</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="rejectedApplications">0</div>
+                <div class="stat-label">Rejected</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="applications-content">
+        <div class="applications-filters">
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter">
+                    <option value="">All Applications</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="priorityFilter">Priority:</label>
+                <select id="priorityFilter">
+                    <option value="">All Priorities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="sortFilter">Sort by:</label>
+                <select id="sortFilter">
+                    <option value="applied_at_desc">Latest First</option>
+                    <option value="applied_at_asc">Oldest First</option>
+                    <option value="priority">Priority</option>
+                    <option value="status">Status</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="applications-list" id="applicationsList">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading your applications...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Application Details Modal -->
+<div id="applicationModal" class="modal" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2 id="applicationTitle">Application Details</h2>
+            <button class="modal-close" onclick="closeApplicationModal()">&times;</button>
+        </div>
+        <div id="applicationContent">
+            <!-- Content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+let allApplications = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    
+    if (currentUser.user_type !== 'volunteer') {
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    initializeApplicationsPage();
+    loadApplications();
+});
+
+function initializeApplicationsPage() {
+    // Set up event listeners
+    document.getElementById('refreshApplications').addEventListener('click', loadApplications);
+    document.getElementById('statusFilter').addEventListener('change', filterApplications);
+    document.getElementById('priorityFilter').addEventListener('change', filterApplications);
+    document.getElementById('sortFilter').addEventListener('change', filterApplications);
+}
+
+async function loadApplications() {
+    try {
+        const response = await apiCall('/api/volunteer/applications');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allApplications = data.applications;
+            updateStats(data.applications);
+            filterApplications();
+        } else {
+            showNotification(data.error || 'Failed to load applications', 'error');
+            document.getElementById('applicationsList').innerHTML = '<div class="no-data">Failed to load applications</div>';
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load applications');
+        document.getElementById('applicationsList').innerHTML = '<div class="no-data">Failed to load applications</div>';
+    }
+}
+
+function updateStats(applications) {
+    const total = applications.length;
+    const pending = applications.filter(app => app.status === 'pending').length;
+    const approved = applications.filter(app => app.status === 'approved').length;
+    const rejected = applications.filter(app => app.status === 'rejected').length;
+    
+    document.getElementById('totalApplications').textContent = total;
+    document.getElementById('pendingApplications').textContent = pending;
+    document.getElementById('approvedApplications').textContent = approved;
+    document.getElementById('rejectedApplications').textContent = rejected;
+}
+
+function filterApplications() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const sortFilter = document.getElementById('sortFilter').value;
+    
+    let filteredApplications = [...allApplications];
+    
+    // Apply filters
+    if (statusFilter) {
+        filteredApplications = filteredApplications.filter(app => app.status === statusFilter);
+    }
+    
+    if (priorityFilter) {
+        filteredApplications = filteredApplications.filter(app => app.priority_level === priorityFilter);
+    }
+    
+    // Apply sorting
+    filteredApplications.sort((a, b) => {
+        switch (sortFilter) {
+            case 'applied_at_desc':
+                return new Date(b.applied_at) - new Date(a.applied_at);
+            case 'applied_at_asc':
+                return new Date(a.applied_at) - new Date(b.applied_at);
+            case 'priority':
+                const priorityOrder = { 'critical': 1, 'high': 2, 'medium': 3, 'low': 4 };
+                return priorityOrder[a.priority_level] - priorityOrder[b.priority_level];
+            case 'status':
+                const statusOrder = { 'pending': 1, 'approved': 2, 'rejected': 3 };
+                return statusOrder[a.status] - statusOrder[b.status];
+            default:
+                return 0;
+        }
+    });
+    
+    displayApplications(filteredApplications);
+}
+
+function displayApplications(applications) {
+    const container = document.getElementById('applicationsList');
+    
+    if (applications.length === 0) {
+        container.innerHTML = '<div class="no-data">No applications found matching your filters</div>';
+        return;
+    }
+    
+    container.innerHTML = applications.map(application => `
+        <div class="application-item status-${application.status}">
+            <div class="application-header">
+                <div class="application-info">
+                    <h3>${application.request_title}</h3>
+                    <p class="organization-name">
+                        <i class="fas fa-building"></i> ${application.organization_name}
+                    </p>
+                </div>
+                <div class="application-badges">
+                    <span class="status-badge status-${application.status}">
+                        ${getStatusText(application.status)}
+                    </span>
+                    <span class="priority-badge priority-${application.priority_level}">
+                        ${application.priority_level.toUpperCase()}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="application-details">
+                <p class="request-description">${application.request_description.substring(0, 150)}${application.request_description.length > 150 ? '...' : ''}</p>
+                
+                <div class="application-meta">
+                    <span><i class="fas fa-map-marker-alt"></i> ${application.state}, ${application.district}</span>
+                    <span><i class="fas fa-calendar"></i> Applied: ${formatRelativeTime(application.applied_at)}</span>
+                    ${application.responded_at ? `<span><i class="fas fa-clock"></i> Responded: ${formatRelativeTime(application.responded_at)}</span>` : ''}
+                    <span><i class="fas fa-tag"></i> ${application.category_name}</span>
+                </div>
+                
+                ${application.message ? `
+                    <div class="application-message">
+                        <strong>Your message:</strong> "${application.message}"
+                    </div>
+                ` : ''}
+                
+                ${application.response_message ? `
+                    <div class="response-message status-${application.status}">
+                        <strong>Organization response:</strong> "${application.response_message}"
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="application-actions">
+                <button class="btn btn-primary btn-small" onclick="viewApplicationDetails(${application.id})">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+                
+                ${application.status === 'approved' ? `
+                    <button class="btn btn-success btn-small" onclick="contactOrganization('${application.organization_name}')">
+                        <i class="fas fa-phone"></i> Contact Organization
+                    </button>
+                ` : ''}
+                
+                <button class="btn btn-info btn-small" onclick="viewEmergencyRequest(${application.request_id})">
+                    <i class="fas fa-external-link-alt"></i> View Request
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getStatusText(status) {
+    switch (status) {
+        case 'pending':
+            return 'PENDING REVIEW';
+        case 'approved':
+            return 'APPROVED ✓';
+        case 'rejected':
+            return 'REJECTED ✗';
+        default:
+            return status.toUpperCase();
+    }
+}
+
+async function viewApplicationDetails(applicationId) {
+    const application = allApplications.find(app => app.id === applicationId);
+    if (!application) {
+        showNotification('Application not found', 'error');
+        return;
+    }
+    
+    displayApplicationDetails(application);
+    const modal = document.getElementById('applicationModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function displayApplicationDetails(application) {
+    document.getElementById('applicationTitle').textContent = `Application: ${application.request_title}`;
+    
+    const content = document.getElementById('applicationContent');
+    content.innerHTML = `
+        <div class="application-details-content">
+            <div class="detail-section">
+                <h3>Request Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Title:</label>
+                        <span>${application.request_title}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Organization:</label>
+                        <span>${application.organization_name}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Priority:</label>
+                        <span class="priority-badge priority-${application.priority_level}">${application.priority_level.toUpperCase()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Location:</label>
+                        <span>${application.state}, ${application.district}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Category:</label>
+                        <span>${application.category_name}</span>
+                    </div>
+                </div>
+                <div class="detail-description">
+                    <label>Description:</label>
+                    <p>${application.request_description}</p>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Application Status</h3>
+                <div class="status-timeline">
+                    <div class="timeline-item completed">
+                        <div class="timeline-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h4>Application Submitted</h4>
+                            <p>${formatDateTime(application.applied_at)}</p>
+                            ${application.message ? `<p class="timeline-message">"${application.message}"</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item ${application.responded_at ? 'completed' : 'pending'}">
+                        <div class="timeline-icon">
+                            <i class="fas fa-${application.status === 'approved' ? 'check' : application.status === 'rejected' ? 'times' : 'clock'}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h4>Organization Response</h4>
+                            ${application.responded_at ? `
+                                <p>${formatDateTime(application.responded_at)}</p>
+                                <p class="status-text status-${application.status}">
+                                    ${getStatusText(application.status)}
+                                </p>
+                                ${application.response_message ? `<p class="timeline-message">"${application.response_message}"</p>` : ''}
+                            ` : `
+                                <p class="pending-text">Waiting for organization review...</p>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            ${application.status === 'approved' ? `
+                <div class="detail-section">
+                    <h3>Next Steps</h3>
+                    <div class="next-steps">
+                        <div class="step-item">
+                            <i class="fas fa-phone"></i>
+                            <span>Contact the organization to coordinate your volunteer work</span>
+                        </div>
+                        <div class="step-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>Prepare to travel to ${application.state}, ${application.district}</span>
+                        </div>
+                        <div class="step-item">
+                            <i class="fas fa-tools"></i>
+                            <span>Ensure you have the required skills and equipment</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function closeApplicationModal() {
+    const modal = document.getElementById('applicationModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+function contactOrganization(orgName) {
+    // Create a modal with contact options
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Contact ${orgName}</h2>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p>You can contact the organization through the following methods:</p>
+                <div class="contact-options" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+                    <div class="contact-option" style="padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-envelope" style="color: #007bff; font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>Email</strong>
+                            <p style="margin: 5px 0 0 0; color: #666;">The organization will contact you via email with further instructions.</p>
+                        </div>
+                    </div>
+                    <div class="contact-option" style="padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-phone" style="color: #28a745; font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>Phone</strong>
+                            <p style="margin: 5px 0 0 0; color: #666;">Check your email for contact details or wait for their call.</p>
+                        </div>
+                    </div>
+                    <div class="contact-option" style="padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-comments" style="color: #ffc107; font-size: 1.2rem;"></i>
+                        <div>
+                            <strong>Direct Message</strong>
+                            <p style="margin: 5px 0 0 0; color: #666;">You can also check your application status in "My Applications" page.</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <a href="/my-applications" class="btn btn-primary">
+                        <i class="fas fa-list"></i> View My Applications
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+function viewEmergencyRequest(requestId) {
+    window.location.href = `/emergency?request=${requestId}`;
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('applicationModal');
+    if (e.target === modal) {
+        closeApplicationModal();
+    }
+});
+</script>
+
+<style>
+.applications-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.applications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.applications-header h1 {
+    margin: 0;
+    color: #333;
+    font-size: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #138496;
+    transform: translateY(-2px);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-outline-primary {
+    background: transparent;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    color: white;
+    text-decoration: none;
+}
+
+/* Status and Priority Badge Styles */
+.status-badge, .priority-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+/* Status Badge Colors */
+.status-badge.status-pending {
+    background: #ffc107;
+    color: #212529;
+}
+
+.status-badge.status-approved {
+    background: #28a745;
+    color: white;
+}
+
+.status-badge.status-rejected {
+    background: #dc3545;
+    color: white;
+}
+
+/* Priority Badge Colors */
+.priority-badge.priority-low {
+    background: #28a745;
+    color: white;
+}
+
+.priority-badge.priority-medium {
+    background: #ffc107;
+    color: #212529;
+}
+
+.priority-badge.priority-high {
+    background: #fd7e14;
+    color: white;
+}
+
+.priority-badge.priority-critical {
+    background: #dc3545;
+    color: white;
+}
+
+.applications-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.3s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.applications-content {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.applications-filters {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    background: white;
+    min-width: 150px;
+}
+
+.application-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.3s;
+    background: white;
+}
+
+.application-item:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.application-item.status-pending {
+    border-left: 4px solid #ffc107;
+}
+
+.application-item.status-approved {
+    border-left: 4px solid #28a745;
+}
+
+.application-item.status-rejected {
+    border-left: 4px solid #dc3545;
+}
+
+.application-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.application-info h3 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.organization-name {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.application-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.request-description {
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.application-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.application-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.application-message,
+.response-message {
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+}
+
+.application-message {
+    background: #e3f2fd;
+    border-left: 3px solid #2196f3;
+    color: #1565c0;
+}
+
+.response-message {
+    border-left: 3px solid;
+}
+
+.response-message.status-approved {
+    background: #e8f5e8;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.response-message.status-rejected {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.application-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 60px;
+    color: #666;
+}
+
+.no-data {
+    text-align: center;
+    padding: 60px;
+    color: #999;
+    font-style: italic;
+    font-size: 1.1rem;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 10px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.7);
+    transition: transform 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: white;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 10px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.7);
+    transition: transform 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: white;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.application-details-content {
+    padding: 20px;
+}
+
+.detail-section {
+    margin-bottom: 25px;
+}
+
+.detail-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 8px;
+    font-size: 1.1rem;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.detail-description {
+    margin-top: 15px;
+}
+
+.detail-description label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.detail-description p {
+    color: #555;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.status-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 15px;
+    position: relative;
+}
+
+.timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 40px;
+    width: 2px;
+    height: calc(100% + 20px);
+    background: #e9ecef;
+}
+
+.timeline-item.completed::after {
+    background: #28a745;
+}
+
+.timeline-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.timeline-item.completed .timeline-icon {
+    background: #28a745;
+}
+
+.timeline-item.pending .timeline-icon {
+    background: #ffc107;
+    color: #333;
+}
+
+.timeline-content h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.timeline-content p {
+    margin: 0 0 5px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.timeline-message {
+    background: #f8f9fa;
+    padding: 8px;
+    border-radius: 5px;
+    border-left: 3px solid #17a2b8;
+    font-style: italic;
+    color: #555 !important;
+}
+
+.status-text {
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    display: inline-block;
+}
+
+.status-text.status-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-text.status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.pending-text {
+    color: #856404 !important;
+    font-style: italic;
+}
+
+.next-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+}
+
+.step-item i {
+    color: #28a745;
+    font-size: 1.2rem;
+    width: 20px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .applications-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .applications-filters {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .application-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .application-badges {
+        align-self: flex-start;
+    }
+    
+    .application-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

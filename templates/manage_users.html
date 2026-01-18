@@ -1,0 +1,801 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>User Management</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+            <button class="btn btn-primary" onclick="refreshUsers()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="management-content">
+        <div class="filters-section">
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter" onchange="filterUsers()">
+                    <option value="">All Status</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="stateFilter">State:</label>
+                <select id="stateFilter" onchange="filterUsers()">
+                    <option value="">All States</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="searchFilter">Search:</label>
+                <input type="text" id="searchFilter" placeholder="Search by name or email..." onkeyup="filterUsers()">
+            </div>
+        </div>
+        
+        <div class="users-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">0</div>
+                <div class="stat-label">Total Volunteers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approvedUsers">0</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingUsers">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="rejectedUsers">0</div>
+                <div class="stat-label">Rejected</div>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>State</th>
+                            <th>District</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="8" class="loading">Loading volunteers...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div id="userDetailsModal" class="modal" style="display: none;">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h2 id="userDetailsTitle">User Details</h2>
+            <button class="modal-close" onclick="closeUserDetailsModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="userDetailsContent">
+                <div class="loading">Loading user details...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+let allUsers = [];
+let filteredUsers = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    
+    if (currentUser.user_type !== 'admin') {
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    loadUsers();
+    populateStateFilter();
+});
+
+async function loadUsers() {
+    try {
+        const response = await apiCall('/api/admin/users');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allUsers = data.users;
+            filteredUsers = [...allUsers];
+            displayUsers();
+            updateStats();
+        } else {
+            document.getElementById('usersTableBody').innerHTML = 
+                '<tr><td colspan="8" class="error">Failed to load users</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        document.getElementById('usersTableBody').innerHTML = 
+            '<tr><td colspan="8" class="error">Error loading users</td></tr>';
+    }
+}
+
+function populateStateFilter() {
+    const states = [
+        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+        'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+        'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+        'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
+        'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+        'Lakshadweep', 'Puducherry'
+    ];
+    
+    const select = document.getElementById('stateFilter');
+    states.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state;
+        option.textContent = state;
+        select.appendChild(option);
+    });
+}
+
+function filterUsers() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const stateFilter = document.getElementById('stateFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+    
+    filteredUsers = allUsers.filter(user => {
+        const matchesStatus = !statusFilter || user.verification_status === statusFilter;
+        const matchesState = !stateFilter || user.state === stateFilter;
+        const matchesSearch = !searchFilter || 
+            user.full_name.toLowerCase().includes(searchFilter) ||
+            user.email.toLowerCase().includes(searchFilter);
+        
+        return matchesStatus && matchesState && matchesSearch;
+    });
+    
+    displayUsers();
+    updateStats();
+}
+
+function displayUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (filteredUsers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No users found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = filteredUsers.map(user => `
+        <tr>
+            <td>${user.id}</td>
+            <td>${user.full_name}</td>
+            <td>${user.email}</td>
+            <td>${user.state}</td>
+            <td>${user.district}</td>
+            <td><span class="status-badge ${user.verification_status}">${user.verification_status}</span></td>
+            <td>${formatDate(user.created_at)}</td>
+            <td>
+                <button class="btn btn-small btn-primary" onclick="viewUserDetails(${user.id})">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                ${user.verification_status === 'pending' ? `
+                    <button class="btn btn-small btn-success" onclick="approveUser(${user.id})">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-small btn-danger" onclick="rejectUser(${user.id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateStats() {
+    const total = filteredUsers.length;
+    const approved = filteredUsers.filter(u => u.verification_status === 'approved').length;
+    const pending = filteredUsers.filter(u => u.verification_status === 'pending').length;
+    const rejected = filteredUsers.filter(u => u.verification_status === 'rejected').length;
+    
+    document.getElementById('totalUsers').textContent = total;
+    document.getElementById('approvedUsers').textContent = approved;
+    document.getElementById('pendingUsers').textContent = pending;
+    document.getElementById('rejectedUsers').textContent = rejected;
+}
+
+function refreshUsers() {
+    loadUsers();
+}
+
+async function viewUserDetails(userId) {
+    openUserDetailsModal();
+    
+    try {
+        const response = await apiCall(`/api/admin/users/${userId}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayUserDetails(data.user);
+        } else {
+            document.getElementById('userDetailsContent').innerHTML = 
+                '<div class="error">Failed to load user details</div>';
+        }
+    } catch (error) {
+        console.error('Error loading user details:', error);
+        document.getElementById('userDetailsContent').innerHTML = 
+            '<div class="error">Error loading user details</div>';
+    }
+}
+
+function displayUserDetails(user) {
+    document.getElementById('userDetailsTitle').textContent = `${user.full_name} - Details`;
+    
+    let detailsHtml = `
+        <div class="user-details-container">
+            <div class="user-basic-info">
+                <h3>Basic Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>ID:</label>
+                        <span>${user.id}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name:</label>
+                        <span>${user.full_name}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Email:</label>
+                        <span>${user.email}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Phone:</label>
+                        <span>${user.phone || 'Not provided'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span class="status-badge ${user.verification_status}">${user.verification_status}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Location:</label>
+                        <span>${user.district}, ${user.state}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Address:</label>
+                        <span>${user.address || 'Not provided'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Joined:</label>
+                        <span>${formatDate(user.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+    `;
+    
+    // Add skills section
+    if (user.skills && user.skills.length > 0) {
+        detailsHtml += `
+            <div class="user-skills-section">
+                <h3>Skills (${user.skills.length})</h3>
+                <div class="skills-grid">
+                    ${user.skills.map(skill => `
+                        <div class="skill-card ${skill.is_verified ? 'verified' : 'pending'}">
+                            <div class="skill-name">${skill.skill_name}</div>
+                            <div class="skill-category">${skill.category_name}</div>
+                            <div class="skill-level">${skill.proficiency_level}</div>
+                            <div class="skill-status">${skill.is_verified ? 'Verified' : 'Pending'}</div>
+                            ${skill.verification_link ? `<a href="${skill.verification_link}" target="_blank" class="skill-link">View Certificate</a>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add assignments section
+    if (user.assignments && user.assignments.length > 0) {
+        detailsHtml += `
+            <div class="user-assignments-section">
+                <h3>Past Work / Assignments (${user.assignments.length})</h3>
+                <div class="assignments-list">
+                    ${user.assignments.map(assignment => `
+                        <div class="assignment-card">
+                            <div class="assignment-title">${assignment.title}</div>
+                            <div class="assignment-org">Organization: ${assignment.organization_name}</div>
+                            <div class="assignment-status">Status: ${assignment.status}</div>
+                            <div class="assignment-date">Applied: ${formatDate(assignment.created_at)}</div>
+                            ${assignment.accepted_at ? `<div class="assignment-date">Accepted: ${formatDate(assignment.accepted_at)}</div>` : ''}
+                            ${assignment.completed_at ? `<div class="assignment-date">Completed: ${formatDate(assignment.completed_at)}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    detailsHtml += '</div>';
+    
+    document.getElementById('userDetailsContent').innerHTML = detailsHtml;
+}
+
+async function approveUser(userId) {
+    if (!confirm('Are you sure you want to approve this user?')) return;
+    
+    try {
+        const response = await apiCall(`/api/admin/approve-user/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ action: 'approve' })
+        });
+        
+        if (response.ok) {
+            showNotification('User approved successfully!', 'success');
+            loadUsers();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to approve user', 'error');
+        }
+    } catch (error) {
+        console.error('Error approving user:', error);
+        showNotification('Failed to approve user', 'error');
+    }
+}
+
+async function rejectUser(userId) {
+    if (!confirm('Are you sure you want to reject this user?')) return;
+    
+    try {
+        const response = await apiCall(`/api/admin/approve-user/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ action: 'reject' })
+        });
+        
+        if (response.ok) {
+            showNotification('User rejected successfully!', 'success');
+            loadUsers();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to reject user', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting user:', error);
+        showNotification('Failed to reject user', 'error');
+    }
+}
+
+function openUserDetailsModal() {
+    const modal = document.getElementById('userDetailsModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeUserDetailsModal() {
+    const modal = document.getElementById('userDetailsModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('userDetailsModal');
+    if (e.target === modal) {
+        closeUserDetailsModal();
+    }
+});
+</script>
+
+<style>
+.header-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.header-actions .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1;
+    color: white;
+}
+
+.header-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.header-actions .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.header-actions .btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.header-actions .btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.header-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.header-actions .btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.management-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.filters-section {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    outline: none;
+    border-color: #dc3545;
+}
+
+.users-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.table-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    position: sticky;
+    top: 0;
+}
+
+.data-table tr:hover {
+    background: #f8f9fa;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Modal styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.large-modal {
+    max-width: 90%;
+    width: 1000px;
+    max-height: 90vh;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9) translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.modal-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* User details styles */
+.user-details-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.user-basic-info,
+.user-skills-section,
+.user-assignments-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.user-basic-info h3,
+.user-skills-section h3,
+.user-assignments-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    color: #333;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.skill-card {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.skill-card.verified {
+    border-color: #28a745;
+}
+
+.skill-card.pending {
+    border-color: #ffc107;
+}
+
+.skill-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.skill-category {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.skill-level {
+    color: #dc3545;
+    font-weight: 500;
+    text-transform: capitalize;
+    margin-bottom: 5px;
+}
+
+.skill-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.skill-link {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+.skill-link:hover {
+    text-decoration: underline;
+}
+
+.assignments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.assignment-card {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.assignment-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.assignment-org,
+.assignment-status,
+.assignment-date {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.loading,
+.error,
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.error {
+    color: #dc3545;
+}
+</style>
+{% endblock %}

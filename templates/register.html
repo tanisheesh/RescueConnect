@@ -1,0 +1,594 @@
+{% extends "base.html" %}
+
+{% block title %}Register - RescueConnect{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Join RescueConnect</h2>
+            <p>Register to help with emergency response efforts</p>
+        </div>
+        
+        <!-- Registration Type Tabs -->
+        <div class="auth-tabs">
+            <button class="tab-btn active" onclick="switchTab('volunteer')">
+                <i class="fas fa-user"></i>
+                Register as Volunteer
+            </button>
+            <button class="tab-btn" onclick="switchTab('organization')">
+                <i class="fas fa-building"></i>
+                Register as Organization
+            </button>
+        </div>
+        
+        <!-- Volunteer Registration Form -->
+        <div id="volunteerTab" class="tab-content active">
+            <form id="volunteerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="volunteerName">Full Name *</label>
+                    <input type="text" id="volunteerName" name="fullName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="volunteerEmail">Email Address *</label>
+                    <input type="email" id="volunteerEmail" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="volunteerPhone">Phone Number</label>
+                    <input type="tel" id="volunteerPhone" name="phone" placeholder="+91 XXXXX XXXXX">
+                </div>
+                
+                <div class="form-group">
+                    <label for="volunteerAddress">Address</label>
+                    <input type="text" id="volunteerAddress" name="address" placeholder="Your complete address">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="volunteerState">State/UT *</label>
+                        <select id="volunteerState" name="state" required>
+                            <option value="">Select State/UT</option>
+                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                            <option value="Assam">Assam</option>
+                            <option value="Bihar">Bihar</option>
+                            <option value="Chhattisgarh">Chhattisgarh</option>
+                            <option value="Goa">Goa</option>
+                            <option value="Gujarat">Gujarat</option>
+                            <option value="Haryana">Haryana</option>
+                            <option value="Himachal Pradesh">Himachal Pradesh</option>
+                            <option value="Jharkhand">Jharkhand</option>
+                            <option value="Karnataka">Karnataka</option>
+                            <option value="Kerala">Kerala</option>
+                            <option value="Madhya Pradesh">Madhya Pradesh</option>
+                            <option value="Maharashtra">Maharashtra</option>
+                            <option value="Manipur">Manipur</option>
+                            <option value="Meghalaya">Meghalaya</option>
+                            <option value="Mizoram">Mizoram</option>
+                            <option value="Nagaland">Nagaland</option>
+                            <option value="Odisha">Odisha</option>
+                            <option value="Punjab">Punjab</option>
+                            <option value="Rajasthan">Rajasthan</option>
+                            <option value="Sikkim">Sikkim</option>
+                            <option value="Tamil Nadu">Tamil Nadu</option>
+                            <option value="Telangana">Telangana</option>
+                            <option value="Tripura">Tripura</option>
+                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                            <option value="Uttarakhand">Uttarakhand</option>
+                            <option value="West Bengal">West Bengal</option>
+                            <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                            <option value="Chandigarh">Chandigarh</option>
+                            <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                            <option value="Delhi">Delhi</option>
+                            <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                            <option value="Ladakh">Ladakh</option>
+                            <option value="Lakshadweep">Lakshadweep</option>
+                            <option value="Puducherry">Puducherry</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="volunteerDistrict">District *</label>
+                        <input type="text" id="volunteerDistrict" name="district" required placeholder="Enter your district">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="volunteerPassword">Password *</label>
+                    <input type="password" id="volunteerPassword" name="password" required>
+                    <div class="password-requirements">
+                        <small>Password must be at least 8 characters with uppercase, lowercase, number, and special character</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="volunteerConfirmPassword">Confirm Password *</label>
+                    <input type="password" id="volunteerConfirmPassword" name="confirmPassword" required>
+                </div>
+                
+                <div class="approval-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Your volunteer account will be reviewed and approved by our admin team before you can login.</p>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-user-plus"></i>
+                    Register as Volunteer
+                </button>
+            </form>
+        </div>
+        
+        <!-- Organization Registration Form -->
+        <div id="organizationTab" class="tab-content">
+            <form id="organizationForm" class="auth-form">
+                <div class="form-group">
+                    <label for="orgName">Organization Name *</label>
+                    <input type="text" id="orgName" name="fullName" required placeholder="Enter organization name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgType">Organization Type *</label>
+                    <select id="orgType" name="organizationType" required>
+                        <option value="">Select organization type</option>
+                        <option value="ngo">NGO/Non-Profit</option>
+                        <option value="government">Government Agency</option>
+                        <option value="hospital">Hospital/Medical Center</option>
+                        <option value="fire_department">Fire Department</option>
+                        <option value="police">Police Department</option>
+                        <option value="disaster_management">Disaster Management</option>
+                        <option value="corporate">Corporate CSR</option>
+                        <option value="educational">Educational Institution</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgEmail">Official Email Address *</label>
+                    <input type="email" id="orgEmail" name="email" required placeholder="official@organization.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgPhone">Contact Number *</label>
+                    <input type="tel" id="orgPhone" name="phone" required placeholder="+91 XXXXX XXXXX">
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgRegistration">Registration Number</label>
+                    <input type="text" id="orgRegistration" name="registrationNumber" placeholder="Government registration number (if applicable)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgAddress">Official Address *</label>
+                    <textarea id="orgAddress" name="address" required placeholder="Complete official address" rows="3"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="orgState">State/UT *</label>
+                        <select id="orgState" name="state" required>
+                            <option value="">Select State/UT</option>
+                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                            <option value="Assam">Assam</option>
+                            <option value="Bihar">Bihar</option>
+                            <option value="Chhattisgarh">Chhattisgarh</option>
+                            <option value="Goa">Goa</option>
+                            <option value="Gujarat">Gujarat</option>
+                            <option value="Haryana">Haryana</option>
+                            <option value="Himachal Pradesh">Himachal Pradesh</option>
+                            <option value="Jharkhand">Jharkhand</option>
+                            <option value="Karnataka">Karnataka</option>
+                            <option value="Kerala">Kerala</option>
+                            <option value="Madhya Pradesh">Madhya Pradesh</option>
+                            <option value="Maharashtra">Maharashtra</option>
+                            <option value="Manipur">Manipur</option>
+                            <option value="Meghalaya">Meghalaya</option>
+                            <option value="Mizoram">Mizoram</option>
+                            <option value="Nagaland">Nagaland</option>
+                            <option value="Odisha">Odisha</option>
+                            <option value="Punjab">Punjab</option>
+                            <option value="Rajasthan">Rajasthan</option>
+                            <option value="Sikkim">Sikkim</option>
+                            <option value="Tamil Nadu">Tamil Nadu</option>
+                            <option value="Telangana">Telangana</option>
+                            <option value="Tripura">Tripura</option>
+                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                            <option value="Uttarakhand">Uttarakhand</option>
+                            <option value="West Bengal">West Bengal</option>
+                            <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                            <option value="Chandigarh">Chandigarh</option>
+                            <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                            <option value="Delhi">Delhi</option>
+                            <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                            <option value="Ladakh">Ladakh</option>
+                            <option value="Lakshadweep">Lakshadweep</option>
+                            <option value="Puducherry">Puducherry</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="orgDistrict">District *</label>
+                        <input type="text" id="orgDistrict" name="district" required placeholder="Enter district">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgWebsite">Website (Optional)</label>
+                    <input type="url" id="orgWebsite" name="website" placeholder="https://www.organization.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgDescription">Organization Description *</label>
+                    <textarea id="orgDescription" name="description" required placeholder="Brief description of your organization and its emergency response capabilities" rows="4"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgPassword">Password *</label>
+                    <input type="password" id="orgPassword" name="password" required>
+                    <div class="password-requirements">
+                        <small>Password must be at least 8 characters with uppercase, lowercase, number, and special character</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgConfirmPassword">Confirm Password *</label>
+                    <input type="password" id="orgConfirmPassword" name="confirmPassword" required>
+                </div>
+                
+                <div class="approval-notice">
+                    <i class="fas fa-shield-check"></i>
+                    <p>Organization accounts require verification and approval by our admin team. This process may take 1-3 business days.</p>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-building"></i>
+                    Register Organization
+                </button>
+            </form>
+        </div>
+        
+        <div class="auth-footer">
+            <p>Already have an account? <a href="/login">Sign in here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(tabName + 'Tab').classList.add('active');
+}
+
+// Volunteer form submission
+document.getElementById('volunteerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        full_name: formData.get('fullName'),
+        user_type: 'volunteer',
+        phone: formData.get('phone'),
+        address: formData.get('address'),
+        state: formData.get('state'),
+        district: formData.get('district')
+    };
+    
+    // Validate passwords match
+    if (formData.get('password') !== formData.get('confirmPassword')) {
+        showNotification('Passwords do not match', 'error');
+        return;
+    }
+    
+    await submitRegistration(data, 'volunteer');
+});
+
+// Organization form submission
+document.getElementById('organizationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = {
+        email: formData.get('email'),
+        password: formData.get('password'),
+        full_name: formData.get('fullName'),
+        user_type: 'organization',
+        phone: formData.get('phone'),
+        address: formData.get('address'),
+        state: formData.get('state'),
+        district: formData.get('district'),
+        organization_type: formData.get('organizationType'),
+        registration_number: formData.get('registrationNumber'),
+        website: formData.get('website'),
+        description: formData.get('description')
+    };
+    
+    // Validate passwords match
+    if (formData.get('password') !== formData.get('confirmPassword')) {
+        showNotification('Passwords do not match', 'error');
+        return;
+    }
+    
+    await submitRegistration(data, 'organization');
+});
+
+async function submitRegistration(data, type) {
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            const message = type === 'volunteer' 
+                ? 'Volunteer registration successful! Your account is pending admin approval.' 
+                : 'Organization registration successful! Your account will be reviewed and approved within 1-3 business days.';
+            
+            showNotification(message, 'success');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 3000);
+        } else {
+            if (result.details && Array.isArray(result.details)) {
+                showNotification(result.details.join(', '), 'error');
+            } else {
+                showNotification(result.error || 'Registration failed', 'error');
+            }
+        }
+    } catch (error) {
+        showNotification('Network error. Please try again.', 'error');
+    }
+}
+</script>
+
+<style>
+/* Auth Container */
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.auth-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 600px;
+    overflow: hidden;
+}
+
+.auth-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.auth-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.auth-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+/* Tabs */
+.auth-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.tab-btn:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.tab-btn.active {
+    background: white;
+    color: #667eea;
+    border-bottom: 3px solid #667eea;
+}
+
+.tab-btn i {
+    font-size: 1.2rem;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 30px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Form Styles */
+.auth-form {
+    max-width: 100%;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.password-requirements {
+    margin-top: 5px;
+}
+
+.password-requirements small {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.approval-notice {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.approval-notice i {
+    color: #1976d2;
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.approval-notice p {
+    margin: 0;
+    color: #1565c0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.auth-footer {
+    text-align: center;
+    padding: 20px 30px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.auth-footer p {
+    margin: 0;
+    color: #666;
+}
+
+.auth-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .auth-container {
+        padding: 10px;
+    }
+    
+    .auth-header {
+        padding: 30px 20px;
+    }
+    
+    .auth-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .tab-content {
+        padding: 20px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .tab-btn {
+        padding: 15px 10px;
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}

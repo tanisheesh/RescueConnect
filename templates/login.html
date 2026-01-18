@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block title %}Login - RescueConnect{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Welcome Back</h2>
+            <p>Sign in to your RescueConnect account</p>
+        </div>
+        
+        <!-- Login Type Tabs -->
+        <div class="auth-tabs">
+            <button class="tab-btn active" onclick="switchTab('user')">
+                <i class="fas fa-user"></i>
+                Login as User
+            </button>
+            <button class="tab-btn" onclick="switchTab('organization')">
+                <i class="fas fa-building"></i>
+                Login as Organization
+            </button>
+        </div>
+        
+        <!-- User Login Form -->
+        <div id="userTab" class="tab-content active">
+            <form id="userLoginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="userEmail">Email Address</label>
+                    <input type="email" id="userEmail" name="email" required placeholder="your.email@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="userPassword">Password</label>
+                    <input type="password" id="userPassword" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In as User
+                </button>
+            </form>
+            
+            <div class="demo-section">
+                <h4>Demo User Accounts:</h4>
+                <div class="demo-accounts">
+                    <button type="button" class="demo-login-btn admin" onclick="quickLogin('admin@emergency.gov', 'admin123!', 'user')">
+                        <i class="fas fa-user-shield"></i>
+                        <div class="demo-info">
+                            <strong>Admin Login</strong>
+                            <small>System Administrator</small>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="demo-login-btn volunteer" onclick="quickLogin('john.doe@email.com', 'volunteer123!', 'user')">
+                        <i class="fas fa-hands-helping"></i>
+                        <div class="demo-info">
+                            <strong>Volunteer Login</strong>
+                            <small>John Doe - Medical Expert</small>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Organization Login Form -->
+        <div id="organizationTab" class="tab-content">
+            <form id="orgLoginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="orgEmail">Organization Email</label>
+                    <input type="email" id="orgEmail" name="email" required placeholder="official@organization.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="orgPassword">Password</label>
+                    <input type="password" id="orgPassword" name="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-full">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In as Organization
+                </button>
+            </form>
+            
+            <div class="demo-section">
+                <h4>Demo Organization Account:</h4>
+                <div class="demo-accounts">
+                    <button type="button" class="demo-login-btn organization" onclick="quickLogin('disaster@redcross.org', 'org123!', 'organization')">
+                        <i class="fas fa-building"></i>
+                        <div class="demo-info">
+                            <strong>Organization Login</strong>
+                            <small>Red Cross Emergency Response</small>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="/register">Register here</a></p>
+        </div>
+        
+        <div class="approval-notice">
+            <i class="fas fa-info-circle"></i>
+            <p><strong>Note:</strong> All new registrations require admin approval before you can login. If you just registered, please wait for approval confirmation.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(tabName + 'Tab').classList.add('active');
+}
+
+// User login form submission
+document.getElementById('userLoginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('userEmail').value;
+    const password = document.getElementById('userPassword').value;
+    
+    await performLogin(email, password);
+});
+
+// Organization login form submission
+document.getElementById('orgLoginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('orgEmail').value;
+    const password = document.getElementById('orgPassword').value;
+    
+    await performLogin(email, password);
+});
+
+async function performLogin(email, password) {
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('Login successful, storing token:', data.token.substring(0, 20) + '...');
+            
+            // Store authentication data
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            // Update auth manager immediately
+            auth.token = data.token;
+            auth.user = data.user;
+            auth.updateNavigation();
+            
+            showNotification('Login successful!', 'success');
+            
+            // Redirect based on user type after a short delay
+            setTimeout(() => {
+                console.log('Redirecting user type:', data.user.user_type);
+                switch(data.user.user_type) {
+                    case 'admin':
+                        window.location.href = '/admin-dashboard';
+                        break;
+                    case 'organization':
+                        window.location.href = '/organization-dashboard';
+                        break;
+                    case 'volunteer':
+                        window.location.href = '/volunteer-dashboard';
+                        break;
+                    default:
+                        window.location.href = '/dashboard';
+                }
+            }, 300);
+        } else {
+            showNotification(data.error || 'Login failed', 'error');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showNotification('Network error. Please try again.', 'error');
+    }
+}
+
+function quickLogin(email, password, tabType) {
+    // Switch to appropriate tab and fill form
+    if (tabType === 'user') {
+        switchTab('user');
+        document.getElementById('userEmail').value = email;
+        document.getElementById('userPassword').value = password;
+    } else {
+        switchTab('organization');
+        document.getElementById('orgEmail').value = email;
+        document.getElementById('orgPassword').value = password;
+    }
+    
+    // Perform login
+    performLogin(email, password);
+}
+</script>
+
+<style>
+/* Auth Container */
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+}
+
+.auth-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 500px;
+    overflow: hidden;
+}
+
+.auth-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 30px;
+    text-align: center;
+}
+
+.auth-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.auth-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+/* Tabs */
+.auth-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.tab-btn:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.tab-btn.active {
+    background: white;
+    color: #667eea;
+    border-bottom: 3px solid #667eea;
+}
+
+.tab-btn i {
+    font-size: 1.2rem;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 30px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Form Styles */
+.auth-form {
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-full {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+/* Demo Section */
+.demo-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.demo-section h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.demo-accounts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.demo-login-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: left;
+    width: 100%;
+}
+
+.demo-login-btn:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+}
+
+.demo-login-btn i {
+    font-size: 1.5rem;
+    width: 30px;
+    text-align: center;
+}
+
+.demo-login-btn.admin i {
+    color: #dc3545;
+}
+
+.demo-login-btn.organization i {
+    color: #28a745;
+}
+
+.demo-login-btn.volunteer i {
+    color: #007bff;
+}
+
+.demo-info {
+    flex: 1;
+}
+
+.demo-info strong {
+    display: block;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.demo-info small {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.approval-notice {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 30px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.approval-notice i {
+    color: #856404;
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.approval-notice p {
+    margin: 0;
+    color: #856404;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.auth-footer {
+    text-align: center;
+    padding: 20px 30px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.auth-footer p {
+    margin: 0;
+    color: #666;
+}
+
+.auth-footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .auth-container {
+        padding: 10px;
+    }
+    
+    .auth-header {
+        padding: 30px 20px;
+    }
+    
+    .auth-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .tab-content {
+        padding: 20px;
+    }
+    
+    .tab-btn {
+        padding: 15px 10px;
+        font-size: 0.9rem;
+    }
+    
+    .approval-notice {
+        margin: 20px 15px;
+    }
+}
+</style>
+{% endblock %}

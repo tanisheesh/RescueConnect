@@ -1,0 +1,834 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Organizations - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Organization Management</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+            <button class="btn btn-primary" onclick="refreshOrganizations()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="management-content">
+        <div class="filters-section">
+            <div class="filter-group">
+                <label for="statusFilter">Status:</label>
+                <select id="statusFilter" onchange="filterOrganizations()">
+                    <option value="">All Status</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="stateFilter">State:</label>
+                <select id="stateFilter" onchange="filterOrganizations()">
+                    <option value="">All States</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="searchFilter">Search:</label>
+                <input type="text" id="searchFilter" placeholder="Search by name or email..." onkeyup="filterOrganizations()">
+            </div>
+        </div>
+        
+        <div class="orgs-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalOrgs">0</div>
+                <div class="stat-label">Total Organizations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approvedOrgs">0</div>
+                <div class="stat-label">Approved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingOrgs">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeRequests">0</div>
+                <div class="stat-label">Active Requests</div>
+            </div>
+        </div>
+        
+        <div class="table-section">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>State</th>
+                            <th>District</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orgsTableBody">
+                        <tr>
+                            <td colspan="8" class="loading">Loading organizations...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Organization Details Modal -->
+<div id="orgDetailsModal" class="modal" style="display: none;">
+    <div class="modal-content large-modal">
+        <div class="modal-header">
+            <h2 id="orgDetailsTitle">Organization Details</h2>
+            <button class="modal-close" onclick="closeOrgDetailsModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="orgDetailsContent">
+                <div class="loading">Loading organization details...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+let allOrganizations = [];
+let filteredOrganizations = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    
+    if (currentUser.user_type !== 'admin') {
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    loadOrganizations();
+    populateStateFilters();
+});
+
+async function loadOrganizations() {
+    try {
+        const response = await apiCall('/api/admin/organizations');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allOrganizations = data.organizations;
+            filteredOrganizations = [...allOrganizations];
+            displayOrganizations();
+            updateStats();
+        } else {
+            document.getElementById('orgsTableBody').innerHTML = 
+                '<tr><td colspan="8" class="error">Failed to load organizations</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading organizations:', error);
+        document.getElementById('orgsTableBody').innerHTML = 
+            '<tr><td colspan="8" class="error">Error loading organizations</td></tr>';
+    }
+}
+
+function populateStateFilters() {
+    const states = [
+        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+        'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+        'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+        'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
+        'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+        'Lakshadweep', 'Puducherry'
+    ];
+    
+    // Populate filter dropdown
+    const filterSelect = document.getElementById('stateFilter');
+    states.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state;
+        option.textContent = state;
+        filterSelect.appendChild(option);
+    });
+}
+
+function filterOrganizations() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const stateFilter = document.getElementById('stateFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+    
+    filteredOrganizations = allOrganizations.filter(org => {
+        const matchesStatus = !statusFilter || org.verification_status === statusFilter;
+        const matchesState = !stateFilter || org.state === stateFilter;
+        const matchesSearch = !searchFilter || 
+            org.full_name.toLowerCase().includes(searchFilter) ||
+            org.email.toLowerCase().includes(searchFilter);
+        
+        return matchesStatus && matchesState && matchesSearch;
+    });
+    
+    displayOrganizations();
+    updateStats();
+}
+
+function displayOrganizations() {
+    const tbody = document.getElementById('orgsTableBody');
+    
+    if (filteredOrganizations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No organizations found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = filteredOrganizations.map(org => `
+        <tr>
+            <td>${org.id}</td>
+            <td>${org.full_name}</td>
+            <td>${org.email}</td>
+            <td>${org.state}</td>
+            <td>${org.district}</td>
+            <td><span class="status-badge ${org.verification_status}">${org.verification_status}</span></td>
+            <td>${formatDate(org.created_at)}</td>
+            <td>
+                <button class="btn btn-small btn-primary" onclick="viewOrgDetails(${org.id})">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                ${org.verification_status === 'pending' ? `
+                    <button class="btn btn-small btn-success" onclick="approveOrganization(${org.id})">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-small btn-danger" onclick="rejectOrganization(${org.id})">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateStats() {
+    const total = filteredOrganizations.length;
+    const approved = filteredOrganizations.filter(o => o.verification_status === 'approved').length;
+    const pending = filteredOrganizations.filter(o => o.verification_status === 'pending').length;
+    
+    document.getElementById('totalOrgs').textContent = total;
+    document.getElementById('approvedOrgs').textContent = approved;
+    document.getElementById('pendingOrgs').textContent = pending;
+    document.getElementById('activeRequests').textContent = '0'; // Will be updated with real data
+}
+
+function refreshOrganizations() {
+    loadOrganizations();
+}
+
+async function approveOrganization(orgId) {
+    if (!confirm('Are you sure you want to approve this organization?')) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/admin/approve/user/${orgId}`, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'approve' })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Organization approved successfully!', 'success');
+            loadOrganizations(); // Refresh the list
+        } else {
+            showNotification(data.error || 'Failed to approve organization', 'error');
+        }
+    } catch (error) {
+        console.error('Error approving organization:', error);
+        showNotification('Error approving organization', 'error');
+    }
+}
+
+async function rejectOrganization(orgId) {
+    const reason = prompt('Please provide a reason for rejection (optional):');
+    
+    if (!confirm('Are you sure you want to reject this organization?')) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/admin/approve/user/${orgId}`, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: 'reject',
+                reason: reason || 'No reason provided'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Organization rejected successfully!', 'success');
+            loadOrganizations(); // Refresh the list
+        } else {
+            showNotification(data.error || 'Failed to reject organization', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting organization:', error);
+        showNotification('Error rejecting organization', 'error');
+    }
+}
+
+async function viewOrgDetails(orgId) {
+    openOrgDetailsModal();
+    
+    try {
+        const response = await apiCall(`/api/admin/users/${orgId}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayOrgDetails(data.user);
+        } else {
+            document.getElementById('orgDetailsContent').innerHTML = 
+                '<div class="error">Failed to load organization details</div>';
+        }
+    } catch (error) {
+        console.error('Error loading organization details:', error);
+        document.getElementById('orgDetailsContent').innerHTML = 
+            '<div class="error">Error loading organization details</div>';
+    }
+}
+
+function displayOrgDetails(org) {
+    document.getElementById('orgDetailsTitle').textContent = `${org.full_name} - Details`;
+    
+    let detailsHtml = `
+        <div class="org-details-container">
+            <div class="org-basic-info">
+                <h3>Basic Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>ID:</label>
+                        <span>${org.id}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name:</label>
+                        <span>${org.full_name}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Email:</label>
+                        <span>${org.email}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Phone:</label>
+                        <span>${org.phone || 'Not provided'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span class="status-badge ${org.verification_status}">${org.verification_status}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Location:</label>
+                        <span>${org.district}, ${org.state}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Address:</label>
+                        <span>${org.address || 'Not provided'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Joined:</label>
+                        <span>${formatDate(org.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+    `;
+    
+    // Add emergency requests section
+    if (org.emergency_requests && org.emergency_requests.length > 0) {
+        detailsHtml += `
+            <div class="org-requests-section">
+                <h3>Emergency Requests (${org.emergency_requests.length})</h3>
+                <div class="requests-list">
+                    ${org.emergency_requests.map(request => `
+                        <div class="request-card">
+                            <div class="request-title">${request.title}</div>
+                            <div class="request-priority">Priority: <span class="priority-${request.priority_level}">${request.priority_level}</span></div>
+                            <div class="request-volunteers">Volunteers Needed: ${request.volunteers_needed}</div>
+                            <div class="request-status">Status: ${request.status}</div>
+                            <div class="request-approved">${request.is_approved ? 'Approved' : 'Pending Approval'}</div>
+                            <div class="request-date">Created: ${formatDate(request.created_at)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    } else {
+        detailsHtml += `
+            <div class="org-requests-section">
+                <h3>Emergency Requests</h3>
+                <div class="no-data">No emergency requests created yet</div>
+            </div>
+        `;
+    }
+    
+    detailsHtml += '</div>';
+    
+    document.getElementById('orgDetailsContent').innerHTML = detailsHtml;
+}
+
+// Modal functions
+function openOrgDetailsModal() {
+    const modal = document.getElementById('orgDetailsModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeOrgDetailsModal() {
+    const modal = document.getElementById('orgDetailsModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', function(e) {
+    const detailsModal = document.getElementById('orgDetailsModal');
+    
+    if (e.target === detailsModal) {
+        closeOrgDetailsModal();
+    }
+});
+</script>
+
+<style>
+.header-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.header-actions .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1;
+    color: white;
+}
+
+.header-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.header-actions .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.header-actions .btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.header-actions .btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.header-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.header-actions .btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* Same styles as manage_users.html with some additions */
+.management-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.filters-section {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    outline: none;
+    border-color: #dc3545;
+}
+
+.orgs-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.table-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    position: sticky;
+    top: 0;
+}
+
+.data-table tr:hover {
+    background: #f8f9fa;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Priority badges */
+.priority-critical {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.priority-high {
+    color: #fd7e14;
+    font-weight: bold;
+}
+
+.priority-medium {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.priority-low {
+    color: #28a745;
+    font-weight: bold;
+}
+
+/* Modal and form styles - same as manage_users.html */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.large-modal {
+    max-width: 90%;
+    width: 1000px;
+    max-height: 90vh;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9) translateY(-20px);
+    transition: all 0.3s ease;
+    max-width: 500px;
+    width: 90%;
+}
+
+.modal.show .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.modal-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 24px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-form {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background: #fafafa;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #dc3545;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 24px;
+}
+
+.modal-actions .btn {
+    min-width: 100px;
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.modal-form.submitting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Organization details styles - similar to user details */
+.org-details-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.org-basic-info,
+.org-requests-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.org-basic-info h3,
+.org-requests-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    color: #333;
+}
+
+.requests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.request-card {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.request-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.request-priority,
+.request-volunteers,
+.request-status,
+.request-approved,
+.request-date {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.loading,
+.error,
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.error {
+    color: #dc3545;
+}
+</style>
+{% endblock %}

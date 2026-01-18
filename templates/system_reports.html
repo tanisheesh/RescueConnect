@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+
+{% block title %}System Reports - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>System Reports</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+            <button class="btn btn-primary" onclick="refreshReports()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="reports-content">
+        <div class="reports-filters">
+            <div class="filter-group">
+                <label for="reportTimeRange">Time Range:</label>
+                <select id="reportTimeRange" onchange="loadAllReports()">
+                    <option value="7d" selected>Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="90d">Last 90 Days</option>
+                    <option value="1y">Last Year</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="reports-container">
+            <div class="report-section">
+                <div class="report-header">
+                    <h3>Registration Trends</h3>
+                    <div class="report-stats">
+                        <span id="totalRegistrations">0</span> total registrations
+                    </div>
+                </div>
+                <div id="registrationTrends" class="report-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading registration trends...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-section">
+                <div class="report-header">
+                    <h3>Skills Distribution</h3>
+                    <div class="report-stats">
+                        <span id="totalSkills">0</span> total skills
+                    </div>
+                </div>
+                <div id="skillsDistribution" class="report-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading skills distribution...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-section">
+                <div class="report-header">
+                    <h3>Emergency Requests by State</h3>
+                    <div class="report-stats">
+                        <span id="totalRequests">0</span> total requests
+                    </div>
+                </div>
+                <div id="requestsByState" class="report-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading requests by state...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-section">
+                <div class="report-header">
+                    <h3>Verification Status Summary</h3>
+                    <div class="report-stats">
+                        <span id="totalUsers">0</span> total users
+                    </div>
+                </div>
+                <div id="verificationSummary" class="report-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading verification summary...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-section">
+                <div class="report-header">
+                    <h3>Activity Summary</h3>
+                    <div class="report-stats">
+                        <span id="totalActivities">0</span> total activities
+                    </div>
+                </div>
+                <div id="activitySummary" class="report-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading activity summary...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-section">
+                <div class="report-header">
+                    <h3>Response Metrics</h3>
+                    <div class="report-stats">
+                        Performance overview
+                    </div>
+                </div>
+                <div id="responseMetrics" class="report-content">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Loading response metrics...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    
+    if (currentUser.user_type !== 'admin') {
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    loadAllReports();
+});
+
+async function loadAllReports() {
+    const timeRange = document.getElementById('reportTimeRange').value;
+    
+    await Promise.all([
+        loadRegistrationTrends(timeRange),
+        loadSkillsDistribution(timeRange),
+        loadRequestsByState(timeRange),
+        loadVerificationSummary(timeRange),
+        loadActivitySummary(timeRange),
+        loadResponseMetrics(timeRange)
+    ]);
+}
+
+async function loadRegistrationTrends(timeRange) {
+    try {
+        const response = await apiCall(`/api/admin/reports/registration-trends?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayRegistrationTrends(data.trends);
+            document.getElementById('totalRegistrations').textContent = data.total || 0;
+        } else {
+            document.getElementById('registrationTrends').innerHTML = '<div class="error">Failed to load registration trends</div>';
+        }
+    } catch (error) {
+        console.error('Error loading registration trends:', error);
+        document.getElementById('registrationTrends').innerHTML = '<div class="error">Error loading registration trends</div>';
+    }
+}
+
+async function loadSkillsDistribution(timeRange) {
+    try {
+        const response = await apiCall(`/api/admin/reports/skills-distribution?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displaySkillsDistribution(data.distribution);
+            document.getElementById('totalSkills').textContent = data.total || 0;
+        } else {
+            document.getElementById('skillsDistribution').innerHTML = '<div class="error">Failed to load skills distribution</div>';
+        }
+    } catch (error) {
+        console.error('Error loading skills distribution:', error);
+        document.getElementById('skillsDistribution').innerHTML = '<div class="error">Error loading skills distribution</div>';
+    }
+}
+
+async function loadRequestsByState(timeRange) {
+    try {
+        const response = await apiCall(`/api/admin/reports/requests-by-state?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayRequestsByState(data.requests);
+            document.getElementById('totalRequests').textContent = data.total || 0;
+        } else {
+            document.getElementById('requestsByState').innerHTML = '<div class="error">Failed to load requests by state</div>';
+        }
+    } catch (error) {
+        console.error('Error loading requests by state:', error);
+        document.getElementById('requestsByState').innerHTML = '<div class="error">Error loading requests by state</div>';
+    }
+}
+
+async function loadVerificationSummary(timeRange) {
+    try {
+        const response = await apiCall(`/api/admin/reports/verification-summary?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayVerificationSummary(data.summary);
+            document.getElementById('totalUsers').textContent = data.total || 0;
+        } else {
+            document.getElementById('verificationSummary').innerHTML = '<div class="error">Failed to load verification summary</div>';
+        }
+    } catch (error) {
+        console.error('Error loading verification summary:', error);
+        document.getElementById('verificationSummary').innerHTML = '<div class="error">Error loading verification summary</div>';
+    }
+}
+
+async function loadActivitySummary(timeRange) {
+    try {
+        const response = await apiCall(`/api/admin/reports/activity-summary?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayActivitySummary(data.activities);
+            document.getElementById('totalActivities').textContent = data.total || 0;
+        } else {
+            document.getElementById('activitySummary').innerHTML = '<div class="error">Failed to load activity summary</div>';
+        }
+    } catch (error) {
+        console.error('Error loading activity summary:', error);
+        document.getElementById('activitySummary').innerHTML = '<div class="error">Error loading activity summary</div>';
+    }
+}
+
+async function loadResponseMetrics(timeRange) {
+    try {
+        const response = await apiCall(`/api/admin/reports/response-metrics?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayResponseMetrics(data.metrics);
+        } else {
+            document.getElementById('responseMetrics').innerHTML = '<div class="error">Failed to load response metrics</div>';
+        }
+    } catch (error) {
+        console.error('Error loading response metrics:', error);
+        document.getElementById('responseMetrics').innerHTML = '<div class="error">Error loading response metrics</div>';
+    }
+}
+
+function displayRegistrationTrends(trends) {
+    const container = document.getElementById('registrationTrends');
+    
+    if (trends.length === 0) {
+        container.innerHTML = '<div class="no-data">No registration data available</div>';
+        return;
+    }
+    
+    const trendsHtml = trends.map(trend => `
+        <div class="trend-item">
+            <div class="trend-info">
+                <span class="trend-date">${formatDate(trend.date)}</span>
+                <span class="trend-type ${trend.user_type}">${trend.user_type}</span>
+            </div>
+            <div class="trend-count">${trend.count}</div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = trendsHtml;
+}
+
+function displaySkillsDistribution(distribution) {
+    const container = document.getElementById('skillsDistribution');
+    
+    if (distribution.length === 0) {
+        container.innerHTML = '<div class="no-data">No skills data available</div>';
+        return;
+    }
+    
+    const skillsHtml = distribution.map(skill => `
+        <div class="skill-item">
+            <div class="skill-info">
+                <span class="skill-category">${skill.category}</span>
+                <span class="skill-name">${skill.skill_name || 'All Skills'}</span>
+            </div>
+            <div class="skill-count">${skill.count}</div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = skillsHtml;
+}
+
+function displayRequestsByState(requests) {
+    const container = document.getElementById('requestsByState');
+    
+    if (requests.length === 0) {
+        container.innerHTML = '<div class="no-data">No requests data available</div>';
+        return;
+    }
+    
+    const requestsHtml = requests.map(req => `
+        <div class="state-item">
+            <div class="state-info">
+                <span class="state-name">${req.state}</span>
+                <span class="state-priority">Priority: ${req.avg_priority || 'N/A'}</span>
+            </div>
+            <div class="state-count">${req.count}</div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = requestsHtml;
+}
+
+function displayVerificationSummary(summary) {
+    const container = document.getElementById('verificationSummary');
+    
+    if (summary.length === 0) {
+        container.innerHTML = '<div class="no-data">No verification data available</div>';
+        return;
+    }
+    
+    const summaryHtml = summary.map(item => `
+        <div class="verification-item">
+            <div class="verification-info">
+                <span class="verification-type">${item.user_type}</span>
+                <span class="verification-status ${item.verification_status}">${item.verification_status}</span>
+            </div>
+            <div class="verification-count">${item.count}</div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = summaryHtml;
+}
+
+function displayActivitySummary(activities) {
+    const container = document.getElementById('activitySummary');
+    
+    if (activities.length === 0) {
+        container.innerHTML = '<div class="no-data">No activity data available</div>';
+        return;
+    }
+    
+    const activitiesHtml = activities.map(activity => `
+        <div class="activity-item">
+            <div class="activity-info">
+                <span class="activity-action">${activity.action.replace(/_/g, ' ')}</span>
+                <span class="activity-user">${activity.user_type}</span>
+            </div>
+            <div class="activity-count">${activity.count}</div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = activitiesHtml;
+}
+
+function displayResponseMetrics(metrics) {
+    const container = document.getElementById('responseMetrics');
+    
+    if (!metrics) {
+        container.innerHTML = '<div class="no-data">No metrics data available</div>';
+        return;
+    }
+    
+    const metricsHtml = `
+        <div class="metric-item">
+            <div class="metric-info">
+                <span class="metric-label">Average Response Time</span>
+                <span class="metric-description">Time to first volunteer response</span>
+            </div>
+            <div class="metric-value">${metrics.avgResponseTime || '0h'}</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-info">
+                <span class="metric-label">Success Rate</span>
+                <span class="metric-description">Requests successfully fulfilled</span>
+            </div>
+            <div class="metric-value">${metrics.successRate || '0%'}</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-info">
+                <span class="metric-label">Active Assignments</span>
+                <span class="metric-description">Currently ongoing assignments</span>
+            </div>
+            <div class="metric-value">${metrics.activeAssignments || 0}</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-info">
+                <span class="metric-label">Volunteer Utilization</span>
+                <span class="metric-description">Percentage of active volunteers</span>
+            </div>
+            <div class="metric-value">${metrics.volunteerUtilization || '0%'}</div>
+        </div>
+    `;
+    
+    container.innerHTML = metricsHtml;
+}
+
+function refreshReports() {
+    loadAllReports();
+}
+</script>
+
+<style>
+.header-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.header-actions .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1;
+    color: white;
+}
+
+.header-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.header-actions .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.header-actions .btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.header-actions .btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.reports-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.reports-filters {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.filter-group select {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    min-width: 150px;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #dc3545;
+}
+
+.reports-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+}
+
+.report-section {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.report-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.report-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.report-stats {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.report-content {
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.trend-item,
+.skill-item,
+.state-item,
+.verification-item,
+.activity-item,
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.trend-item:hover,
+.skill-item:hover,
+.state-item:hover,
+.verification-item:hover,
+.activity-item:hover,
+.metric-item:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+}
+
+.trend-info,
+.skill-info,
+.state-info,
+.verification-info,
+.activity-info,
+.metric-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.trend-date,
+.skill-category,
+.state-name,
+.verification-type,
+.activity-action,
+.metric-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.trend-type,
+.skill-name,
+.state-priority,
+.verification-status,
+.activity-user,
+.metric-description {
+    font-size: 0.85rem;
+    color: #666;
+    text-transform: capitalize;
+}
+
+.trend-type.volunteer {
+    color: #28a745;
+}
+
+.trend-type.organization {
+    color: #007bff;
+}
+
+.trend-type.admin {
+    color: #dc3545;
+}
+
+.verification-status.approved {
+    color: #28a745;
+}
+
+.verification-status.pending {
+    color: #ffc107;
+}
+
+.verification-status.rejected {
+    color: #dc3545;
+}
+
+.trend-count,
+.skill-count,
+.state-count,
+.verification-count,
+.activity-count,
+.metric-value {
+    font-weight: 700;
+    color: #dc3545;
+    font-size: 1.1rem;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.loading i {
+    color: #dc3545;
+}
+
+.error,
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.error {
+    color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .reports-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-group select {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Dashboard - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Volunteer Dashboard</h1>
+        <div class="user-info">
+            <span id="userGreeting">Welcome back!</span>
+            <span class="user-type">Volunteer</span>
+        </div>
+    </div>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-hands-helping"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="activeAssignments">0</div>
+                <div class="stat-label">Active Assignments</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-certificate"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="verifiedSkills">0</div>
+                <div class="stat-label">Verified Skills</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="completedMissions">0</div>
+                <div class="stat-label">Completed Missions</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="hoursVolunteered">0</div>
+                <div class="stat-label">Hours Volunteered</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-content">
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Quick Actions</h2>
+            </div>
+            <div class="quick-actions">
+                <a href="/emergency" class="action-card">
+                    <i class="fas fa-search"></i>
+                    <span>Browse Emergencies</span>
+                </a>
+                <a href="/my-applications" class="action-card">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>My Applications</span>
+                </a>
+                <a href="/skills" class="action-card">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Manage Skills</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>My Applications</h2>
+                <div class="section-controls">
+                    <select id="applicationStatusFilter">
+                        <option value="">All Applications</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                    <button class="btn btn-primary btn-small" id="refreshApplications">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="applications-list" id="applicationsList">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading applications...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>My Assignments</h2>
+                <button class="btn btn-primary btn-small" id="refreshAssignments">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="assignments-list" id="assignmentsList">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading assignments...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Emergency Requests in Your State</h2>
+                <div class="section-controls">
+                    <div class="priority-filter-group">
+                        <label for="priorityFilter">Filter by Priority:</label>
+                        <select id="priorityFilter" class="priority-select">
+                            <option value="">🔍 All Priorities</option>
+                            <option value="critical">🚨 Critical</option>
+                            <option value="high">⚠️ High</option>
+                            <option value="medium">📋 Medium</option>
+                            <option value="low">📝 Low</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-small" id="refreshNearby">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="nearby-requests" id="nearbyRequests">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading emergency requests...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    
+    if (currentUser.user_type !== 'volunteer') {
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    initializeVolunteerDashboard();
+    loadVolunteerData();
+});
+
+function initializeVolunteerDashboard() {
+    document.getElementById('userGreeting').textContent = `Welcome back, ${currentUser.full_name}!`;
+    
+    // Set up event listeners
+    document.getElementById('refreshApplications').addEventListener('click', loadApplications);
+    document.getElementById('applicationStatusFilter').addEventListener('change', loadApplications);
+    document.getElementById('refreshAssignments').addEventListener('click', loadAssignments);
+    document.getElementById('refreshNearby').addEventListener('click', loadNearbyRequests);
+    document.getElementById('priorityFilter').addEventListener('change', loadNearbyRequests);
+}
+
+async function loadVolunteerData() {
+    await Promise.all([
+        loadUserSkills(),
+        loadApplications(),
+        loadAssignments(),
+        loadNearbyRequests()
+    ]);
+}
+
+async function loadUserSkills() {
+    try {
+        const response = await apiCall('/api/user/skills');
+        const data = await response.json();
+        
+        if (response.ok) {
+            const verifiedCount = data.skills.filter(skill => skill.is_verified).length;
+            document.getElementById('verifiedSkills').textContent = verifiedCount;
+        }
+    } catch (error) {
+        console.error('Error loading skills:', error);
+    }
+}
+
+async function loadApplications() {
+    try {
+        const response = await apiCall('/api/volunteer/applications');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayApplications(data.applications);
+            updateApplicationStats(data.applications);
+        }
+    } catch (error) {
+        console.error('Error loading applications:', error);
+        document.getElementById('applicationsList').innerHTML = '<div class="no-data">No applications found</div>';
+    }
+}
+
+async function loadAssignments() {
+    try {
+        const response = await apiCall('/api/volunteer/assignments');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayAssignments(data.assignments);
+            updateAssignmentStats(data.assignments);
+        }
+    } catch (error) {
+        console.error('Error loading assignments:', error);
+        document.getElementById('assignmentsList').innerHTML = '<div class="no-data">No assignments found</div>';
+    }
+}
+
+async function loadNearbyRequests() {
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    
+    try {
+        const response = await apiCall(`/api/volunteer/state-requests${priorityFilter ? '?priority=' + priorityFilter : ''}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayNearbyRequests(data.requests);
+        }
+    } catch (error) {
+        console.error('Error loading state requests:', error);
+        document.getElementById('nearbyRequests').innerHTML = '<div class="no-data">No emergency requests found in your state</div>';
+    }
+}
+
+function displayApplications(applications) {
+    const container = document.getElementById('applicationsList');
+    
+    if (applications.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <p>You haven't applied to any emergency requests yet.</p>
+                <a href="/emergency" class="btn btn-primary">Browse Emergency Requests</a>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show only recent applications (last 3)
+    const recentApplications = applications.slice(0, 3);
+    
+    container.innerHTML = recentApplications.map(application => `
+        <div class="application-item status-${application.status}">
+            <div class="application-header">
+                <h4>${application.request_title}</h4>
+                <span class="status-badge status-${application.status}">
+                    ${application.status === 'pending' ? 'PENDING' : 
+                      application.status === 'approved' ? 'APPROVED ✓' : 
+                      application.status === 'rejected' ? 'REJECTED ✗' : 
+                      application.status.toUpperCase()}
+                </span>
+            </div>
+            <div class="application-details">
+                <div class="application-meta">
+                    <span><i class="fas fa-building"></i> ${application.organization_name}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${application.state}, ${application.district}</span>
+                    <span><i class="fas fa-clock"></i> ${formatRelativeTime(application.applied_at)}</span>
+                </div>
+                ${application.status === 'approved' ? `
+                    <div class="approval-message">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Congratulations! Your application has been approved.</span>
+                    </div>
+                ` : application.status === 'rejected' && application.response_message ? `
+                    <div class="rejection-message">
+                        <i class="fas fa-info-circle"></i>
+                        <span>"${application.response_message}"</span>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    // Add "View All" link if there are more applications
+    if (applications.length > 3) {
+        container.innerHTML += `
+            <div class="view-all-applications">
+                <a href="/my-applications" class="btn btn-outline-primary">
+                    <i class="fas fa-list"></i> View All Applications (${applications.length})
+                </a>
+            </div>
+        `;
+    }
+}
+
+function updateApplicationStats(applications) {
+    // This could be used to update dashboard stats if needed
+    const pending = applications.filter(app => app.status === 'pending').length;
+    const approved = applications.filter(app => app.status === 'approved').length;
+    
+    // Update any relevant dashboard counters here
+}
+
+function displayAssignments(assignments) {
+    const container = document.getElementById('assignmentsList');
+    
+    if (assignments.length === 0) {
+        container.innerHTML = '<div class="no-data">No active assignments</div>';
+        return;
+    }
+    
+    container.innerHTML = assignments.map(assignment => `
+        <div class="assignment-item status-${assignment.status}">
+            <div class="assignment-header">
+                <h3>${assignment.request_title}</h3>
+                <span class="status-badge status-${assignment.status}">${assignment.status.toUpperCase()}</span>
+            </div>
+            <div class="assignment-details">
+                <p>${assignment.request_description}</p>
+                <div class="assignment-meta">
+                    <span><i class="fas fa-building"></i> ${assignment.organization_name}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${assignment.address}</span>
+                    <span><i class="fas fa-clock"></i> ${formatRelativeTime(assignment.assigned_at)}</span>
+                </div>
+            </div>
+            <div class="assignment-actions">
+                ${assignment.status === 'pending' ? `
+                    <button class="btn btn-success btn-small" onclick="respondToAssignment(${assignment.id}, 'accepted')">
+                        Accept
+                    </button>
+                    <button class="btn btn-danger btn-small" onclick="respondToAssignment(${assignment.id}, 'declined')">
+                        Decline
+                    </button>
+                ` : `
+                    <button class="btn btn-primary btn-small" onclick="viewAssignmentDetails(${assignment.id})">
+                        View Details
+                    </button>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayNearbyRequests(requests) {
+    const container = document.getElementById('nearbyRequests');
+    
+    if (requests.length === 0) {
+        container.innerHTML = '<div class="no-data">No emergency requests in your state</div>';
+        return;
+    }
+    
+    container.innerHTML = requests.slice(0, 5).map(request => `
+        <div class="request-item priority-${request.priority_level}">
+            <div class="request-header">
+                <h4>${request.title}</h4>
+                <span class="priority-badge priority-${request.priority_level}">${request.priority_level.toUpperCase()}</span>
+            </div>
+            <div class="request-meta">
+                <span><i class="fas fa-map-marker-alt"></i> ${request.district}, ${request.state}</span>
+                <span><i class="fas fa-users"></i> ${request.volunteers_assigned}/${request.volunteers_needed} volunteers</span>
+                <span><i class="fas fa-building"></i> ${request.organization_name}</span>
+            </div>
+            <div class="request-actions">
+                <button class="btn btn-primary btn-small" onclick="viewRequestDetails(${request.id})">
+                    View Details
+                </button>
+                <button class="btn btn-success btn-small" onclick="expressInterest(${request.id})">
+                    <i class="fas fa-hand-paper"></i> Express Interest
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateAssignmentStats(assignments) {
+    const active = assignments.filter(a => a.status === 'accepted' || a.status === 'pending').length;
+    const completed = assignments.filter(a => a.status === 'completed').length;
+    
+    document.getElementById('activeAssignments').textContent = active;
+    document.getElementById('completedMissions').textContent = completed;
+    
+    // Calculate estimated hours (this would be more sophisticated in real app)
+    document.getElementById('hoursVolunteered').textContent = completed * 4; // Assume 4 hours per mission
+}
+
+async function respondToAssignment(assignmentId, response) {
+    try {
+        const apiResponse = await apiCall(`/api/assignments/${assignmentId}/respond`, {
+            method: 'PUT',
+            body: JSON.stringify({ response })
+        });
+        
+        if (apiResponse.ok) {
+            showNotification(`Assignment ${response} successfully!`, 'success');
+            loadAssignments();
+        } else {
+            const data = await apiResponse.json();
+            showNotification(data.error || 'Failed to respond to assignment', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to respond to assignment');
+    }
+}
+
+function viewRequestDetails(requestId) {
+    window.location.href = `/emergency?id=${requestId}`;
+}
+
+function viewAssignmentDetails(assignmentId) {
+    // This would open a detailed view of the assignment
+    showNotification('Assignment details view coming soon!', 'info');
+}
+
+function expressInterest(requestId) {
+    showNotification('Interest expressed! The organization will be notified.', 'success');
+}
+</script>
+
+<style>
+.application-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: all 0.3s;
+    background: white;
+}
+
+.application-item:hover {
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.application-item.status-pending {
+    border-left: 4px solid #ffc107;
+}
+
+.application-item.status-approved {
+    border-left: 4px solid #28a745;
+}
+
+.application-item.status-rejected {
+    border-left: 4px solid #dc3545;
+}
+
+.application-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.application-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.application-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.application-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.approval-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 5px;
+    color: #155724;
+    font-size: 0.9rem;
+}
+
+.rejection-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    color: #721c24;
+    font-size: 0.9rem;
+}
+
+.view-all-applications {
+    text-align: center;
+    padding: 15px;
+    border-top: 1px solid #e9ecef;
+    margin-top: 10px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 30px;
+    color: #999;
+}
+
+.no-data p {
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+/* Priority Filter Styling */
+.priority-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.priority-filter-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.priority-select {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 180px;
+}
+
+.priority-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.priority-select:hover {
+    border-color: #667eea;
+}
+
+.section-controls {
+    display: flex;
+    gap: 15px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+/* Button Styles - Ensure proper colors */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-success {
+    background: #28a745 !important;
+    color: white !important;
+    border: 1px solid #28a745;
+}
+
+.btn-success:hover {
+    background: #218838 !important;
+    color: white !important;
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: #6c757d !important;
+    color: white !important;
+    border: 1px solid #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #545b62 !important;
+    color: white !important;
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: #007bff !important;
+    color: white !important;
+    border: 1px solid #007bff;
+}
+
+.btn-primary:hover {
+    background: #0056b3 !important;
+    color: white !important;
+    transform: translateY(-1px);
+    text-decoration: none;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+    .application-header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    
+    .application-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}

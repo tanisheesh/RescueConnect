@@ -1,0 +1,3491 @@
+{% extends "base.html" %}
+
+{% block title %}Skills Management - RescueConnect{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Skills Management</h1>
+        <div class="header-actions" id="headerActions">
+            <!-- Dynamic buttons based on user role -->
+        </div>
+    </div>
+    
+    <!-- Admin Section -->
+    <div id="adminSection" class="role-section" style="display: none;">
+        <div class="section-tabs">
+            <button class="tab-btn active" onclick="switchAdminTab('categories')">Categories</button>
+            <button class="tab-btn" onclick="switchAdminTab('skills')">Skills</button>
+            <button class="tab-btn" onclick="switchAdminTab('approvals')">Pending Approvals</button>
+        </div>
+        
+        <!-- Categories Management -->
+        <div id="adminCategories" class="tab-content active">
+            <div class="section-header">
+                <h2>Category Management</h2>
+                <button class="btn btn-primary" onclick="openCreateCategoryModal()">
+                    <i class="fas fa-plus"></i> Create Category
+                </button>
+            </div>
+            <div class="admin-grid" id="categoriesGrid">
+                <div class="loading">Loading categories...</div>
+            </div>
+        </div>
+        
+        <!-- Skills Management -->
+        <div id="adminSkills" class="tab-content">
+            <div class="section-header">
+                <h2>Skills Management</h2>
+                <button class="btn btn-primary" onclick="openCreateSkillModal()">
+                    <i class="fas fa-plus"></i> Create Skill
+                </button>
+            </div>
+            <div class="admin-grid" id="skillsGrid">
+                <div class="loading">Loading skills...</div>
+            </div>
+        </div>
+        
+        <!-- Pending Approvals -->
+        <div id="adminApprovals" class="tab-content">
+            <div class="section-header">
+                <h2>Pending Approvals</h2>
+            </div>
+            <div class="approvals-list" id="approvalsList">
+                <div class="loading">Loading pending approvals...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Organization Section -->
+    <div id="organizationSection" class="role-section" style="display: none;">
+        <div class="section-tabs">
+            <button class="tab-btn active" onclick="switchOrgTab('search')">Find Volunteers</button>
+            <button class="tab-btn" onclick="switchOrgTab('skills')">Browse Skills</button>
+        </div>
+        
+        <!-- Volunteer Search -->
+        <div id="orgSearch" class="tab-content active">
+            <div class="section-header">
+                <h2>Find Volunteers by Skills</h2>
+            </div>
+            <div class="search-filters">
+                <select id="orgSkillFilter">
+                    <option value="">Select a skill to find volunteers</option>
+                </select>
+                <select id="orgStateFilter">
+                    <option value="">All States</option>
+                </select>
+                <select id="orgDistrictFilter">
+                    <option value="">All Districts</option>
+                </select>
+                <button class="btn btn-primary" onclick="searchVolunteers()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+            <div class="volunteers-results" id="volunteersResults">
+                <div class="no-data">Select a skill to find volunteers</div>
+            </div>
+        </div>
+        
+        <!-- Skills Browser -->
+        <div id="orgSkills" class="tab-content">
+            <div class="section-header">
+                <h2>Available Skills</h2>
+            </div>
+            <div class="skills-browser" id="orgSkillsBrowser">
+                <div class="loading">Loading skills...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Volunteer Section -->
+    <div id="volunteerSection" class="role-section" style="display: none;">
+        <div class="skills-overview">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-certificate"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="totalSkills">0</div>
+                        <div class="stat-label">My Skills</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="verifiedSkills">0</div>
+                        <div class="stat-label">Verified Skills</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="pendingSkills">0</div>
+                        <div class="stat-label">Pending Verification</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="skills-sections">
+            <div class="skills-section">
+                <div class="section-header">
+                    <h2>My Skills</h2>
+                    <div class="section-actions">
+                        <input type="text" id="skillSearch" placeholder="Search skills..." class="search-input">
+                        <button class="btn btn-primary" onclick="openAddSkillModal()">
+                            <i class="fas fa-plus"></i> Add Skill
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="skills-grid" id="mySkillsGrid">
+                    <div class="loading">Loading your skills...</div>
+                </div>
+            </div>
+            
+            <div class="skills-section">
+                <div class="section-header">
+                    <h2>Available Skills</h2>
+                    <div class="section-actions">
+                        <select id="categoryFilter">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="available-skills" id="availableSkills">
+                    <div class="loading">Loading available skills...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div id="createCategoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create Category</h2>
+            <button class="modal-close" onclick="closeCreateCategoryModal()">&times;</button>
+        </div>
+        <form id="createCategoryForm" class="modal-form">
+            <div class="form-group">
+                <label for="categoryName">Category Name *</label>
+                <input type="text" id="categoryName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoryType">Category Type *</label>
+                <select id="categoryType" required>
+                    <option value="">Select type</option>
+                    <option value="skill">Skill Category</option>
+                    <option value="disaster">Disaster Category</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoryDescription">Description</label>
+                <textarea id="categoryDescription" rows="3"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateCategoryModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Create Skill Modal -->
+<div id="createSkillModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create Skill</h2>
+            <button class="modal-close" onclick="closeCreateSkillModal()">&times;</button>
+        </div>
+        <form id="createSkillForm" class="modal-form">
+            <div class="form-group">
+                <label for="skillName">Skill Name *</label>
+                <input type="text" id="skillName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="skillCategory">Category *</label>
+                <select id="skillCategory" required>
+                    <option value="">Select category</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="skillDescription">Description</label>
+                <textarea id="skillDescription" rows="3"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateSkillModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Skill</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Skill Modal (for volunteers) -->
+<div id="addSkillModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Skill</h2>
+            <button class="modal-close" onclick="closeAddSkillModal()">&times;</button>
+        </div>
+        <form id="addSkillForm" class="modal-form">
+            <div class="form-group">
+                <label for="skillSelect">Select Skill *</label>
+                <select id="skillSelect" required>
+                    <option value="">Choose a skill</option>
+                </select>
+                <div class="suggest-skill-option">
+                    <small>Don't see your skill? <a href="#" onclick="openSuggestSkillModal()">Suggest a new skill</a></small>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="proficiencyLevel">Proficiency Level *</label>
+                <select id="proficiencyLevel" required>
+                    <option value="">Select proficiency</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="expert">Expert</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="verificationLink">Verification Link (Optional)</label>
+                <input type="url" id="verificationLink" placeholder="https://example.com/certificate">
+                <small>Link to certificate, portfolio, or verification document</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="verificationNotes">Verification Notes (Optional)</label>
+                <textarea id="verificationNotes" rows="2" placeholder="Additional notes about your experience or qualifications"></textarea>
+            </div>
+            
+            <div class="proficiency-descriptions">
+                <div class="proficiency-desc" data-level="beginner">
+                    <strong>Beginner:</strong> Basic knowledge and limited experience
+                </div>
+                <div class="proficiency-desc" data-level="intermediate">
+                    <strong>Intermediate:</strong> Good understanding with practical experience
+                </div>
+                <div class="proficiency-desc" data-level="expert">
+                    <strong>Expert:</strong> Advanced knowledge with extensive experience and ability to train others
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeAddSkillModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Skill</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Suggest New Skill Modal -->
+<div id="suggestSkillModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Skill</h2>
+            <button class="modal-close" onclick="closeSuggestSkillModal()">&times;</button>
+        </div>
+        <form id="suggestSkillForm" class="modal-form">
+            <div class="form-group">
+                <label for="skillOption">Skill Option *</label>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="skillOption" value="existing" checked onchange="toggleSkillInput()">
+                        <span>Select from existing skills</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="skillOption" value="new" onchange="toggleSkillInput()">
+                        <span>Suggest new skill</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Existing Skills Section -->
+            <div id="existingSkillGroup">
+                <div class="form-group">
+                    <label for="existingSkillSelect">Select Skill *</label>
+                    <select id="existingSkillSelect">
+                        <option value="">Choose a skill</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- New Skill Section -->
+            <div id="newSkillGroup" style="display: none;">
+                <div class="form-group">
+                    <label for="suggestSkillName">Skill Name *</label>
+                    <input type="text" id="suggestSkillName" placeholder="Enter the skill name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="categoryOption">Category Option *</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="categoryOption" value="existing" checked onchange="toggleCategoryInput()">
+                            <span>Select existing category</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="categoryOption" value="new" onchange="toggleCategoryInput()">
+                            <span>Suggest new category</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="existingCategoryGroup">
+                    <label for="suggestSkillCategory">Select Category *</label>
+                    <select id="suggestSkillCategory">
+                        <option value="">Choose a category</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="newCategoryGroup" style="display: none;">
+                    <label for="suggestCategoryName">New Category Name *</label>
+                    <input type="text" id="suggestCategoryName" placeholder="Enter new category name">
+                    <small>This category will also need admin approval</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="suggestSkillDescription">Skill Description (Optional)</label>
+                    <textarea id="suggestSkillDescription" rows="3" placeholder="Describe what this skill involves and its applications"></textarea>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="suggestProficiencyLevel">Your Proficiency Level *</label>
+                <select id="suggestProficiencyLevel" required>
+                    <option value="">Select your proficiency</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="expert">Expert</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="suggestVerificationLink">Verification Link (Optional)</label>
+                <input type="url" id="suggestVerificationLink" placeholder="https://example.com/certificate">
+                <small>Link to certificate, portfolio, or verification document</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="suggestVerificationNotes">Verification Notes (Optional)</label>
+                <textarea id="suggestVerificationNotes" rows="2" placeholder="Additional notes about your experience"></textarea>
+            </div>
+            
+            <div class="proficiency-descriptions">
+                <div class="proficiency-desc" data-level="beginner">
+                    <strong>Beginner:</strong> Basic knowledge and limited experience
+                </div>
+                <div class="proficiency-desc" data-level="intermediate">
+                    <strong>Intermediate:</strong> Good understanding with practical experience
+                </div>
+                <div class="proficiency-desc" data-level="expert">
+                    <strong>Expert:</strong> Advanced knowledge with extensive experience and ability to train others
+                </div>
+            </div>
+            
+            <div class="suggestion-note" id="suggestionNote" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <p>Your skill suggestion will be sent to administrators for approval. Once approved, the skill will be available for all volunteers to add.</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeSuggestSkillModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="submitSkillBtn">Add Skill</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div id="editCategoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Category</h2>
+            <button class="modal-close" onclick="closeEditCategoryModal()">&times;</button>
+        </div>
+        <form id="editCategoryForm" class="modal-form">
+            <input type="hidden" id="editCategoryId">
+            
+            <div class="form-group">
+                <label for="editCategoryName">Category Name *</label>
+                <input type="text" id="editCategoryName" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editCategoryType">Category Type *</label>
+                <select id="editCategoryType" required disabled>
+                    <option value="skill">Skill Category</option>
+                    <option value="disaster">Disaster Category</option>
+                </select>
+                <small>Category type cannot be changed after creation</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="editCategoryDescription">Description</label>
+                <textarea id="editCategoryDescription" rows="3"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-danger" onclick="deleteCategory()">Delete Category</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditCategoryModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Skill Modal -->
+<div id="editSkillModal2" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Skill</h2>
+            <button class="modal-close" onclick="closeEditSkillModal2()">&times;</button>
+        </div>
+        <form id="editSkillForm2" class="modal-form">
+            <input type="hidden" id="editSkillId2">
+            
+            <div class="form-group">
+                <label for="editSkillName2">Skill Name *</label>
+                <input type="text" id="editSkillName2" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editSkillCategory2">Category *</label>
+                <select id="editSkillCategory2" required>
+                    <option value="">Select category</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="editSkillDescription2">Description</label>
+                <textarea id="editSkillDescription2" rows="3"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-danger" onclick="deleteSkill()">Delete Skill</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditSkillModal2()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Skill</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Skill Modal -->
+<div id="editSkillModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Skill</h2>
+            <button class="modal-close" onclick="closeEditSkillModal()">&times;</button>
+        </div>
+        <form id="editSkillForm" class="modal-form">
+            <input type="hidden" id="editSkillId">
+            
+            <div class="form-group">
+                <label for="editSkillName">Skill</label>
+                <input type="text" id="editSkillName" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="editProficiencyLevel">Proficiency Level *</label>
+                <select id="editProficiencyLevel" required>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="expert">Expert</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="editVerificationLink">Verification Link</label>
+                <input type="url" id="editVerificationLink" placeholder="https://example.com/certificate">
+            </div>
+            
+            <div class="form-group">
+                <label for="editVerificationNotes">Verification Notes</label>
+                <textarea id="editVerificationNotes" rows="2"></textarea>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-danger" onclick="removeSkill()">Remove Skill</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditSkillModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Skill</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+let mySkills = [];
+let allSkills = [];
+let allCategories = [];
+let currentEditingSkill = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing skills page...');
+    
+    if (!checkAuth()) {
+        console.log('Auth check failed');
+        return;
+    }
+    
+    currentUser = auth.getUser();
+    console.log('Current user:', currentUser);
+    
+    // Show appropriate section based on user type
+    showRoleBasedContent();
+    
+    // Load initial data based on role
+    loadInitialData();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    console.log('Skills page initialization complete');
+});
+
+function showRoleBasedContent() {
+    console.log('Showing role-based content for:', currentUser.user_type);
+    
+    const adminSection = document.getElementById('adminSection');
+    const organizationSection = document.getElementById('organizationSection');
+    const volunteerSection = document.getElementById('volunteerSection');
+    
+    // Hide all sections first
+    adminSection.style.display = 'none';
+    organizationSection.style.display = 'none';
+    volunteerSection.style.display = 'none';
+    
+    // Show appropriate section
+    switch (currentUser.user_type) {
+        case 'admin':
+            console.log('Showing admin section');
+            adminSection.style.display = 'block';
+            break;
+        case 'organization':
+            console.log('Showing organization section');
+            organizationSection.style.display = 'block';
+            break;
+        case 'volunteer':
+            console.log('Showing volunteer section');
+            volunteerSection.style.display = 'block';
+            break;
+        default:
+            console.error('Invalid user type:', currentUser.user_type);
+            showNotification('Invalid user type', 'error');
+            return;
+    }
+}
+
+function loadInitialData() {
+    switch (currentUser.user_type) {
+        case 'admin':
+            loadAdminData();
+            break;
+        case 'organization':
+            loadOrganizationData();
+            break;
+        case 'volunteer':
+            loadVolunteerData();
+            break;
+    }
+}
+
+function setupEventListeners() {
+    // Common event listeners
+    const forms = ['createCategoryForm', 'createSkillForm', 'editCategoryForm', 'editSkillForm2', 'addSkillForm', 'editSkillForm', 'suggestSkillForm'];
+    forms.forEach(formId => {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.addEventListener('submit', handleFormSubmit);
+        }
+    });
+    
+    // Role-specific event listeners
+    if (currentUser.user_type === 'volunteer') {
+        const skillSearch = document.getElementById('skillSearch');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const proficiencyLevel = document.getElementById('proficiencyLevel');
+        
+        if (skillSearch) skillSearch.addEventListener('input', debounce(filterMySkills, 300));
+        if (categoryFilter) categoryFilter.addEventListener('change', filterAvailableSkills);
+        if (proficiencyLevel) proficiencyLevel.addEventListener('change', showProficiencyDescription);
+    }
+}
+
+// ADMIN FUNCTIONS
+async function loadAdminData() {
+    console.log('Loading admin data...');
+    await loadAdminCategories();
+    await loadAdminSkills();
+    await loadPendingApprovals();
+    console.log('Admin data loading complete');
+}
+
+async function loadAdminCategories() {
+    try {
+        console.log('Loading admin categories...');
+        const response = await apiCall('/api/admin/categories');
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Categories loaded:', data);
+            displayAdminCategories(data.categories || []);
+        } else {
+            console.error('Failed to load categories, status:', response.status);
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Error data:', errorData);
+            showNotification('Failed to load categories', 'error');
+        }
+    } catch (error) {
+        console.error('Load categories error:', error);
+        showNotification('Failed to load categories', 'error');
+    }
+}
+
+async function loadAdminSkills() {
+    try {
+        const response = await apiCall('/api/skills');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allSkills = data.skills;
+            displayAdminSkills();
+            populateSkillCategorySelect();
+        } else {
+            showNotification('Failed to load skills', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load skills');
+    }
+}
+
+async function loadPendingApprovals() {
+    try {
+        const response = await apiCall('/api/admin/pending');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayPendingApprovals(data.pending);
+        } else {
+            showNotification('Failed to load pending approvals', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load pending approvals');
+    }
+}
+
+function displayAdminCategories(categories) {
+    console.log('Displaying categories:', categories);
+    const container = document.getElementById('categoriesGrid');
+    
+    if (!container) {
+        console.error('Categories grid container not found');
+        return;
+    }
+    
+    if (!categories || categories.length === 0) {
+        container.innerHTML = '<div class="no-data">No categories found</div>';
+        return;
+    }
+    
+    container.innerHTML = categories.map(category => `
+        <div class="admin-card ${category.is_approved ? 'approved' : 'pending'}">
+            <div class="card-header">
+                <h3>${category.name}</h3>
+                <span class="category-type">${category.type}</span>
+                <span class="status-badge ${category.is_approved ? 'approved' : 'pending'}">
+                    ${category.is_approved ? 'Approved' : 'Pending'}
+                </span>
+            </div>
+            <div class="card-content">
+                ${category.description ? `<p>${category.description}</p>` : ''}
+                <small>Created by: ${category.created_by_name || 'Unknown'}</small>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-small btn-secondary" 
+                        data-category-id="${category.id}"
+                        data-category-name="${category.name}"
+                        data-category-type="${category.type}"
+                        data-category-description="${category.description || ''}"
+                        onclick="editCategoryFromData(this)">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                ${!category.is_approved ? `
+                    <button class="btn btn-small btn-success" onclick="approveCategory(${category.id})">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="btn btn-small btn-danger" onclick="rejectCategory(${category.id})">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                ` : `
+                    <button class="btn btn-small btn-danger" onclick="confirmDeleteCategory(${category.id}, '${category.name}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayAdminSkills() {
+    const container = document.getElementById('skillsGrid');
+    let html = '';
+    
+    Object.entries(allSkills).forEach(([category, skills]) => {
+        html += `
+            <div class="skill-category-section">
+                <h3 class="category-title">
+                    <i class="${getSkillCategoryIcon(category)}"></i>
+                    ${category} (${skills.length} skills)
+                </h3>
+                <div class="skills-list">
+                    ${skills.map(skill => `
+                        <div class="skill-item">
+                            <div class="skill-name">${skill.name}</div>
+                            ${skill.description ? `<div class="skill-desc">${skill.description}</div>` : ''}
+                            <div class="skill-actions">
+                                <button class="btn btn-small btn-secondary" 
+                                        data-skill-id="${skill.id}"
+                                        data-skill-name="${skill.name}"
+                                        data-skill-category-id="${skill.category_id}"
+                                        data-skill-description="${skill.description || ''}"
+                                        onclick="editSkillFromData(this)">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn btn-small btn-danger" onclick="confirmDeleteSkill(${skill.id}, '${skill.name}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html || '<div class="no-data">No skills found</div>';
+}
+
+function displayPendingApprovals(pending) {
+    const container = document.getElementById('approvalsList');
+    
+    if (pending.length === 0) {
+        container.innerHTML = '<div class="no-data">No pending approvals</div>';
+        return;
+    }
+    
+    container.innerHTML = pending.map(item => `
+        <div class="approval-item">
+            <div class="approval-info">
+                <div class="approval-type">${item.type.toUpperCase()}</div>
+                <div class="approval-description">${item.description}</div>
+                <div class="approval-date">${formatDate(item.created_at)}</div>
+            </div>
+            <div class="approval-actions">
+                <button class="btn btn-small btn-success" onclick="approveItem('${item.type}', ${item.id})">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button class="btn btn-small btn-danger" onclick="rejectItem('${item.type}', ${item.id})">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function switchAdminTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`admin${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+}
+
+// ORGANIZATION FUNCTIONS
+async function loadOrganizationData() {
+    await loadAllSkills();
+    populateOrgSkillFilter();
+    populateStateFilters();
+}
+
+function switchOrgTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`org${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+    
+    if (tab === 'skills') {
+        displayOrgSkillsBrowser();
+    }
+}
+
+function populateOrgSkillFilter() {
+    const select = document.getElementById('orgSkillFilter');
+    let options = '<option value="">Select a skill to find volunteers</option>';
+    
+    Object.entries(allSkills).forEach(([category, skills]) => {
+        options += `<optgroup label="${category}">`;
+        skills.forEach(skill => {
+            options += `<option value="${skill.id}">${skill.name}</option>`;
+        });
+        options += '</optgroup>';
+    });
+    
+    select.innerHTML = options;
+}
+
+function populateStateFilters() {
+    const states = [
+        'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+        'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+        'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+        'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
+        'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+        'Lakshadweep', 'Puducherry'
+    ];
+    
+    const stateSelect = document.getElementById('orgStateFilter');
+    let options = '<option value="">All States</option>';
+    states.forEach(state => {
+        options += `<option value="${state}">${state}</option>`;
+    });
+    stateSelect.innerHTML = options;
+}
+
+async function searchVolunteers() {
+    const skillId = document.getElementById('orgSkillFilter').value;
+    const state = document.getElementById('orgStateFilter').value;
+    const district = document.getElementById('orgDistrictFilter').value;
+    
+    if (!skillId) {
+        showNotification('Please select a skill first', 'warning');
+        return;
+    }
+    
+    try {
+        let url = `/api/volunteer/by-skill/${skillId}`;
+        const params = new URLSearchParams();
+        if (state) params.append('state', state);
+        if (district) params.append('district', district);
+        if (params.toString()) url += '?' + params.toString();
+        
+        const response = await apiCall(url);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayVolunteerResults(data.volunteers);
+        } else {
+            showNotification('Failed to search volunteers', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to search volunteers');
+    }
+}
+
+function displayVolunteerResults(volunteers) {
+    const container = document.getElementById('volunteersResults');
+    
+    if (volunteers.length === 0) {
+        container.innerHTML = '<div class="no-data">No volunteers found with the selected criteria</div>';
+        return;
+    }
+    
+    container.innerHTML = volunteers.map(volunteer => `
+        <div class="volunteer-card">
+            <div class="volunteer-header">
+                <h3>${volunteer.full_name}</h3>
+                <span class="proficiency-badge proficiency-${volunteer.proficiency_level}">
+                    ${volunteer.proficiency_level.charAt(0).toUpperCase() + volunteer.proficiency_level.slice(1)}
+                </span>
+                ${volunteer.is_verified ? '<i class="fas fa-check-circle verified-icon" title="Skill Verified"></i>' : ''}
+            </div>
+            <div class="volunteer-details">
+                <p><i class="fas fa-envelope"></i> ${volunteer.email || 'Not provided'}</p>
+                <p><i class="fas fa-phone"></i> ${volunteer.phone || 'Not provided'}</p>
+                <p><i class="fas fa-map-marker-alt"></i> ${volunteer.district || 'Unknown'}, ${volunteer.state || 'Unknown'}</p>
+                <p><i class="fas fa-tools"></i> Skill: ${volunteer.skill_name}</p>
+                <p><i class="fas fa-calendar"></i> Joined: ${formatDate(volunteer.joined_date)}</p>
+            </div>
+            <div class="volunteer-actions">
+                <button class="btn btn-primary btn-small" onclick="contactVolunteer('${volunteer.email}')">
+                    <i class="fas fa-envelope"></i> Contact
+                </button>
+                <button class="btn btn-info btn-small" onclick="viewVolunteerProfile(${volunteer.id})">
+                    <i class="fas fa-user"></i> View Profile
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayOrgSkillsBrowser() {
+    const container = document.getElementById('orgSkillsBrowser');
+    let html = '';
+    
+    Object.entries(allSkills).forEach(([category, skills]) => {
+        html += `
+            <div class="skill-category-section">
+                <h3 class="category-title">
+                    <i class="${getSkillCategoryIcon(category)}"></i>
+                    ${category}
+                </h3>
+                <div class="category-skills">
+                    ${skills.map(skill => `
+                        <div class="skill-browser-item" onclick="searchBySkill(${skill.id})">
+                            <div class="skill-name">${skill.name}</div>
+                            ${skill.description ? `<div class="skill-desc">${skill.description}</div>` : ''}
+                            <button class="btn btn-small btn-primary">
+                                <i class="fas fa-search"></i> Find Volunteers
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html || '<div class="no-data">No skills available</div>';
+}
+
+function searchBySkill(skillId) {
+    // Switch to search tab and set the skill
+    switchOrgTab('search');
+    document.getElementById('orgSkillFilter').value = skillId;
+    searchVolunteers();
+}
+
+function contactVolunteer(email) {
+    window.location.href = `mailto:${email}`;
+}
+
+function viewVolunteerProfile(volunteerId) {
+    showNotification('Volunteer profile view coming soon!', 'info');
+}
+
+// VOLUNTEER FUNCTIONS (existing functions with minor updates)
+async function loadVolunteerData() {
+    await loadMySkills();
+    await loadAllSkills();
+}
+
+async function loadMySkills() {
+    try {
+        const response = await apiCall('/api/user/skills');
+        const data = await response.json();
+        
+        if (response.ok) {
+            mySkills = data.skills;
+            displayMySkills();
+            updateSkillStats();
+        } else {
+            showNotification('Failed to load your skills', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load your skills');
+    }
+}
+
+async function loadAllSkills() {
+    try {
+        const response = await apiCall('/api/skills');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allSkills = data.skills;
+            if (currentUser.user_type === 'volunteer') {
+                populateSkillSelect();
+                populateCategoryFilter();
+                displayAvailableSkills();
+            }
+        } else {
+            showNotification('Failed to load available skills', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load available skills');
+    }
+}
+
+function displayMySkills(skills = mySkills) {
+    const container = document.getElementById('mySkillsGrid');
+    
+    if (skills.length === 0) {
+        container.innerHTML = '<div class="no-data">No skills added yet. Add your first skill to get started!</div>';
+        return;
+    }
+    
+    container.innerHTML = skills.map(skill => `
+        <div class="skill-card ${skill.is_verified ? 'verified' : 'pending'}">
+            <div class="skill-header">
+                <div class="skill-icon">
+                    <i class="${getSkillCategoryIcon(skill.category_name)}"></i>
+                </div>
+                <div class="skill-info">
+                    <h3>${skill.name}</h3>
+                    <span class="skill-category">${skill.category_name}</span>
+                </div>
+                <div class="skill-status">
+                    ${skill.is_verified ? 
+                        '<i class="fas fa-check-circle verified-icon" title="Verified"></i>' : 
+                        '<i class="fas fa-clock pending-icon" title="Pending Verification"></i>'
+                    }
+                </div>
+            </div>
+            
+            <div class="skill-details">
+                <div class="proficiency-level">
+                    <span class="proficiency-label">Proficiency:</span>
+                    <div class="proficiency-toggle" onclick="toggleProficiency(${skill.id})">
+                        <span class="proficiency-badge proficiency-${skill.proficiency_level}" data-skill-id="${skill.id}" data-current-level="${skill.proficiency_level}">
+                            ${skill.proficiency_level.charAt(0).toUpperCase() + skill.proficiency_level.slice(1)}
+                        </span>
+                        <i class="fas fa-sync-alt toggle-icon" title="Click to change proficiency"></i>
+                    </div>
+                </div>
+                
+                ${skill.description ? `<p class="skill-description">${skill.description}</p>` : ''}
+                
+                ${skill.verification_link ? `
+                    <div class="verification-link">
+                        <strong>Verification:</strong> 
+                        <a href="${skill.verification_link}" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-external-link-alt"></i> View Certificate/Document
+                        </a>
+                    </div>
+                ` : ''}
+                
+                ${skill.verification_notes ? `
+                    <div class="verification-notes">
+                        <strong>Notes:</strong> ${skill.verification_notes}
+                    </div>
+                ` : ''}
+                
+                <div class="skill-meta">
+                    <small>Added: ${formatDate(skill.created_at)}</small>
+                    ${skill.verified_at ? `<small>Verified: ${formatDate(skill.verified_at)}</small>` : ''}
+                </div>
+            </div>
+            
+            <div class="skill-actions">
+                <button class="btn btn-small btn-danger" onclick="removeSkillDirect(${skill.id}, '${skill.name}')">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayAvailableSkills() {
+    const container = document.getElementById('availableSkills');
+    const mySkillIds = new Set(mySkills.map(skill => skill.name));
+    
+    let html = '';
+    
+    Object.entries(allSkills).forEach(([category, skills]) => {
+        const availableSkills = skills.filter(skill => !mySkillIds.has(skill.name));
+        
+        if (availableSkills.length > 0) {
+            html += `
+                <div class="skill-category-section">
+                    <h3 class="category-title">
+                        <i class="${getSkillCategoryIcon(category)}"></i>
+                        ${category}
+                    </h3>
+                    <div class="category-skills">
+                        ${availableSkills.map(skill => `
+                            <div class="available-skill-item" onclick="quickAddSkill(${skill.id}, '${skill.name}')">
+                                <div class="skill-name">${skill.name}</div>
+                                ${skill.description ? `<div class="skill-desc">${skill.description}</div>` : ''}
+                                <button class="btn btn-small btn-primary">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    container.innerHTML = html || '<div class="no-data">All available skills have been added!</div>';
+}
+
+function updateSkillStats() {
+    const total = mySkills.length;
+    const verified = mySkills.filter(skill => skill.is_verified).length;
+    const pending = total - verified;
+    
+    document.getElementById('totalSkills').textContent = total;
+    document.getElementById('verifiedSkills').textContent = verified;
+    document.getElementById('pendingSkills').textContent = pending;
+}
+
+function populateSkillSelect() {
+    const select = document.getElementById('skillSelect');
+    const mySkillIds = new Set(mySkills.map(skill => skill.name));
+    
+    let options = '<option value="">Choose a skill</option>';
+    
+    Object.entries(allSkills).forEach(([category, skills]) => {
+        const availableSkills = skills.filter(skill => !mySkillIds.has(skill.name));
+        
+        if (availableSkills.length > 0) {
+            options += `<optgroup label="${category}">`;
+            availableSkills.forEach(skill => {
+                options += `<option value="${skill.id}">${skill.name}</option>`;
+            });
+            options += '</optgroup>';
+        }
+    });
+    
+    select.innerHTML = options;
+}
+
+function populateCategoryFilter() {
+    const select = document.getElementById('categoryFilter');
+    const categories = Object.keys(allSkills);
+    
+    let options = '<option value="">All Categories</option>';
+    categories.forEach(category => {
+        options += `<option value="${category}">${category}</option>`;
+    });
+    
+    select.innerHTML = options;
+}
+
+function populateSkillCategorySelect() {
+    const select = document.getElementById('skillCategory');
+    
+    // Load skill categories for admin
+    apiCall('/api/categories?type=skill').then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Failed to load categories');
+    }).then(data => {
+        if (data.categories) {
+            let options = '<option value="">Select category</option>';
+            data.categories.forEach(category => {
+                options += `<option value="${category.id}">${category.name}</option>`;
+            });
+            select.innerHTML = options;
+        }
+    }).catch(error => {
+        console.error('Error loading categories:', error);
+        showNotification('Failed to load categories', 'error');
+    });
+}
+
+function filterMySkills() {
+    const search = document.getElementById('skillSearch').value.toLowerCase();
+    const filtered = mySkills.filter(skill => 
+        skill.name.toLowerCase().includes(search) ||
+        skill.category_name.toLowerCase().includes(search)
+    );
+    displayMySkills(filtered);
+}
+
+function filterAvailableSkills() {
+    const category = document.getElementById('categoryFilter').value;
+    
+    if (!category) {
+        displayAvailableSkills();
+        return;
+    }
+    
+    const container = document.getElementById('availableSkills');
+    const mySkillIds = new Set(mySkills.map(skill => skill.name));
+    const categorySkills = allSkills[category] || [];
+    const availableSkills = categorySkills.filter(skill => !mySkillIds.has(skill.name));
+    
+    if (availableSkills.length === 0) {
+        container.innerHTML = '<div class="no-data">No available skills in this category</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="skill-category-section">
+            <h3 class="category-title">
+                <i class="${getSkillCategoryIcon(category)}"></i>
+                ${category}
+            </h3>
+            <div class="category-skills">
+                ${availableSkills.map(skill => `
+                    <div class="available-skill-item" onclick="quickAddSkill(${skill.id}, '${skill.name}')">
+                        <div class="skill-name">${skill.name}</div>
+                        ${skill.description ? `<div class="skill-desc">${skill.description}</div>` : ''}
+                        <button class="btn btn-small btn-primary">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// MODAL FUNCTIONS
+function openCreateCategoryModal() {
+    console.log('Opening create category modal');
+    const modal = document.getElementById('createCategoryModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeCreateCategoryModal() {
+    const modal = document.getElementById('createCategoryModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('createCategoryForm').reset();
+    }, 300);
+}
+
+function openCreateSkillModal() {
+    console.log('Opening create skill modal');
+    populateSkillCategorySelect();
+    const modal = document.getElementById('createSkillModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeCreateSkillModal() {
+    const modal = document.getElementById('createSkillModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('createSkillForm').reset();
+    }, 300);
+}
+
+function openAddSkillModal() {
+    // Directly open suggest skill modal instead of regular add skill modal
+    openSuggestSkillModal();
+}
+
+function closeAddSkillModal() {
+    const modal = document.getElementById('addSkillModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('addSkillForm').reset();
+        document.querySelectorAll('.proficiency-desc').forEach(desc => {
+            desc.style.display = 'none';
+        });
+    }, 300);
+}
+
+function closeEditSkillModal() {
+    const modal = document.getElementById('editSkillModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        currentEditingSkill = null;
+    }, 300);
+}
+
+function openEditCategoryModal() {
+    const modal = document.getElementById('editCategoryModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeEditCategoryModal() {
+    const modal = document.getElementById('editCategoryModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('editCategoryForm').reset();
+    }, 300);
+}
+
+function openEditSkillModal2() {
+    populateEditSkillCategorySelect();
+    const modal = document.getElementById('editSkillModal2');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeEditSkillModal2() {
+    const modal = document.getElementById('editSkillModal2');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('editSkillForm2').reset();
+    }, 300);
+}
+
+function editCategory(id, name, type, description) {
+    document.getElementById('editCategoryId').value = id;
+    document.getElementById('editCategoryName').value = name;
+    document.getElementById('editCategoryType').value = type;
+    document.getElementById('editCategoryDescription').value = description;
+    openEditCategoryModal();
+}
+
+function editCategoryFromData(button) {
+    const id = button.dataset.categoryId;
+    const name = button.dataset.categoryName;
+    const type = button.dataset.categoryType;
+    const description = button.dataset.categoryDescription;
+    
+    editCategory(id, name, type, description);
+}
+
+function editSkill2(id, name, categoryId, description) {
+    document.getElementById('editSkillId2').value = id;
+    document.getElementById('editSkillName2').value = name;
+    document.getElementById('editSkillDescription2').value = description;
+    
+    // Load categories and then set the selected value
+    populateEditSkillCategorySelect().then(() => {
+        document.getElementById('editSkillCategory2').value = categoryId;
+    });
+    
+    openEditSkillModal2();
+}
+
+function editSkillFromData(button) {
+    const id = button.dataset.skillId;
+    const name = button.dataset.skillName;
+    const categoryId = button.dataset.skillCategoryId;
+    const description = button.dataset.skillDescription;
+    
+    editSkill2(id, name, categoryId, description);
+}
+
+function populateEditSkillCategorySelect() {
+    const select = document.getElementById('editSkillCategory2');
+    
+    return apiCall('/api/categories?type=skill').then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Failed to load categories');
+    }).then(data => {
+        if (data.categories) {
+            let options = '<option value="">Select category</option>';
+            data.categories.forEach(category => {
+                options += `<option value="${category.id}">${category.name}</option>`;
+            });
+            select.innerHTML = options;
+        }
+    }).catch(error => {
+        console.error('Error loading categories:', error);
+        showNotification('Failed to load categories', 'error');
+    });
+}
+
+async function updateCategory() {
+    const id = document.getElementById('editCategoryId').value;
+    const name = document.getElementById('editCategoryName').value.trim();
+    const description = document.getElementById('editCategoryDescription').value.trim();
+    
+    console.log('Updating category:', { id, name, description });
+    
+    if (!name) {
+        showNotification('Category name is required', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('editCategoryForm');
+    form.classList.add('submitting');
+    
+    try {
+        const response = await apiCall(`/api/admin/categories/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, description })
+        });
+        
+        console.log('Update response status:', response.status);
+        
+        if (response.ok) {
+            showNotification('Category updated successfully!', 'success');
+            closeEditCategoryModal();
+            loadAdminCategories();
+        } else {
+            const data = await response.json();
+            console.error('Update error:', data);
+            showNotification(data.error || 'Failed to update category', 'error');
+        }
+    } catch (error) {
+        console.error('Update category error:', error);
+        showNotification('Failed to update category', 'error');
+    } finally {
+        form.classList.remove('submitting');
+    }
+}
+
+async function updateSkill2() {
+    const id = document.getElementById('editSkillId2').value;
+    const name = document.getElementById('editSkillName2').value.trim();
+    const category_id = document.getElementById('editSkillCategory2').value;
+    const description = document.getElementById('editSkillDescription2').value.trim();
+    
+    if (!name || !category_id) {
+        showNotification('Skill name and category are required', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('editSkillForm2');
+    form.classList.add('submitting');
+    
+    try {
+        const response = await apiCall(`/api/admin/skills/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name, category_id: parseInt(category_id), description })
+        });
+        
+        if (response.ok) {
+            showNotification('Skill updated successfully!', 'success');
+            closeEditSkillModal2();
+            loadAdminSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to update skill', 'error');
+        }
+    } catch (error) {
+        console.error('Update skill error:', error);
+        showNotification('Failed to update skill', 'error');
+    } finally {
+        form.classList.remove('submitting');
+    }
+}
+
+function confirmDeleteCategory(id, name) {
+    if (confirm(`Are you sure you want to delete the category "${name}"?\n\nThis action cannot be undone. The category can only be deleted if it has no associated skills.`)) {
+        deleteCategoryById(id);
+    }
+}
+
+function confirmDeleteSkill(id, name) {
+    if (confirm(`Are you sure you want to delete the skill "${name}"?\n\nThis action cannot be undone. The skill can only be deleted if no users have added it to their profiles.`)) {
+        deleteSkillById(id);
+    }
+}
+
+async function deleteCategoryById(id) {
+    try {
+        const response = await apiCall(`/api/admin/categories/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Category deleted successfully!', 'success');
+            loadAdminCategories();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to delete category', 'error');
+        }
+    } catch (error) {
+        console.error('Delete category error:', error);
+        showNotification('Failed to delete category', 'error');
+    }
+}
+
+async function deleteSkillById(id) {
+    try {
+        const response = await apiCall(`/api/admin/skills/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Skill deleted successfully!', 'success');
+            loadAdminSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to delete skill', 'error');
+        }
+    } catch (error) {
+        console.error('Delete skill error:', error);
+        showNotification('Failed to delete skill', 'error');
+    }
+}
+
+// Functions called from modal delete buttons
+async function deleteCategory() {
+    const id = document.getElementById('editCategoryId').value;
+    const name = document.getElementById('editCategoryName').value;
+    
+    if (confirm(`Are you sure you want to delete the category "${name}"?\n\nThis action cannot be undone. The category can only be deleted if it has no associated skills.`)) {
+        closeEditCategoryModal();
+        await deleteCategoryById(id);
+    }
+}
+
+async function deleteSkill() {
+    const id = document.getElementById('editSkillId2').value;
+    const name = document.getElementById('editSkillName2').value;
+    
+    if (confirm(`Are you sure you want to delete the skill "${name}"?\n\nThis action cannot be undone. The skill can only be deleted if no users have added it to their profiles.`)) {
+        closeEditSkillModal2();
+        await deleteSkillById(id);
+    }
+}
+
+function showProficiencyDescription() {
+    const level = document.getElementById('proficiencyLevel').value;
+    document.querySelectorAll('.proficiency-desc').forEach(desc => {
+        desc.style.display = desc.dataset.level === level ? 'block' : 'none';
+    });
+}
+
+// FORM HANDLERS
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const formId = e.target.id;
+    console.log('Form submitted:', formId);
+    
+    switch (formId) {
+        case 'createCategoryForm':
+            await createCategory();
+            break;
+        case 'createSkillForm':
+            await createSkill();
+            break;
+        case 'editCategoryForm':
+            await updateCategory();
+            break;
+        case 'editSkillForm2':
+            await updateSkill2();
+            break;
+        case 'addSkillForm':
+            await addSkill();
+            break;
+        case 'editSkillForm':
+            await updateSkill();
+            break;
+        case 'suggestSkillForm':
+            await suggestSkill();
+            break;
+        default:
+            console.log('Unknown form:', formId);
+    }
+}
+
+async function createCategory() {
+    const name = document.getElementById('categoryName').value.trim();
+    const type = document.getElementById('categoryType').value;
+    const description = document.getElementById('categoryDescription').value.trim();
+    
+    if (!name || !type) {
+        showNotification('Name and type are required', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('createCategoryForm');
+    form.classList.add('submitting');
+    
+    try {
+        const response = await apiCall('/api/admin/categories', {
+            method: 'POST',
+            body: JSON.stringify({ name, type, description })
+        });
+        
+        if (response.ok) {
+            showNotification('Category created successfully!', 'success');
+            closeCreateCategoryModal();
+            loadAdminCategories();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to create category', 'error');
+        }
+    } catch (error) {
+        console.error('Create category error:', error);
+        showNotification('Failed to create category', 'error');
+    } finally {
+        form.classList.remove('submitting');
+    }
+}
+
+async function createSkill() {
+    const name = document.getElementById('skillName').value.trim();
+    const category_id = document.getElementById('skillCategory').value;
+    const description = document.getElementById('skillDescription').value.trim();
+    
+    if (!name || !category_id) {
+        showNotification('Name and category are required', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('createSkillForm');
+    form.classList.add('submitting');
+    
+    try {
+        const response = await apiCall('/api/admin/skills', {
+            method: 'POST',
+            body: JSON.stringify({ name, category_id: parseInt(category_id), description })
+        });
+        
+        if (response.ok) {
+            showNotification('Skill created successfully!', 'success');
+            closeCreateSkillModal();
+            loadAdminSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to create skill', 'error');
+        }
+    } catch (error) {
+        console.error('Create skill error:', error);
+        showNotification('Failed to create skill', 'error');
+    } finally {
+        form.classList.remove('submitting');
+    }
+}
+
+async function quickAddSkill(skillId, skillName) {
+    try {
+        const response = await apiCall('/api/user/skills', {
+            method: 'POST',
+            body: JSON.stringify({
+                skill_id: skillId,
+                proficiency_level: 'intermediate'
+            })
+        });
+        
+        if (response.ok) {
+            showNotification(`${skillName} added successfully!`, 'success');
+            loadMySkills();
+            loadAllSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to add skill', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to add skill');
+    }
+}
+
+async function addSkill() {
+    const skillId = document.getElementById('skillSelect').value;
+    const proficiencyLevel = document.getElementById('proficiencyLevel').value;
+    const verificationLink = document.getElementById('verificationLink').value;
+    const verificationNotes = document.getElementById('verificationNotes').value;
+    
+    try {
+        const response = await apiCall('/api/user/skills', {
+            method: 'POST',
+            body: JSON.stringify({
+                skill_id: parseInt(skillId),
+                proficiency_level: proficiencyLevel,
+                verification_link: verificationLink,
+                verification_notes: verificationNotes
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Skill added successfully!', 'success');
+            closeAddSkillModal();
+            loadMySkills();
+            loadAllSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to add skill', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to add skill');
+    }
+}
+
+function editSkill(userSkillId) {
+    const skill = mySkills.find(s => s.id === userSkillId);
+    if (!skill) return;
+    
+    currentEditingSkill = skill;
+    
+    document.getElementById('editSkillId').value = skill.id;
+    document.getElementById('editSkillName').value = skill.name;
+    document.getElementById('editProficiencyLevel').value = skill.proficiency_level;
+    document.getElementById('editVerificationLink').value = skill.verification_link || '';
+    document.getElementById('editVerificationNotes').value = skill.verification_notes || '';
+    
+    document.getElementById('editSkillModal').style.display = 'block';
+}
+
+async function updateSkill() {
+    const userSkillId = document.getElementById('editSkillId').value;
+    const proficiencyLevel = document.getElementById('editProficiencyLevel').value;
+    const verificationLink = document.getElementById('editVerificationLink').value;
+    const verificationNotes = document.getElementById('editVerificationNotes').value;
+    
+    try {
+        const response = await apiCall(`/api/user/skills/${userSkillId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                proficiency_level: proficiencyLevel,
+                verification_link: verificationLink,
+                verification_notes: verificationNotes
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Skill updated successfully!', 'success');
+            closeEditSkillModal();
+            loadMySkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to update skill', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to update skill');
+    }
+}
+
+async function removeSkill() {
+    if (!currentEditingSkill) return;
+    
+    if (!confirm(`Are you sure you want to remove "${currentEditingSkill.name}" from your skills?`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/user/skills/${currentEditingSkill.id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Skill removed successfully!', 'success');
+            closeEditSkillModal();
+            loadMySkills();
+            loadAllSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to remove skill', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to remove skill');
+    }
+}
+
+// NEW SKILL SUGGESTION FUNCTIONS
+function openSuggestSkillModal() {
+    closeAddSkillModal();
+    populateSuggestSkillCategories();
+    populateExistingSkillsForSuggestion();
+    const modal = document.getElementById('suggestSkillModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    // Initialize the form state
+    toggleSkillInput();
+    toggleCategoryInput();
+}
+
+function closeSuggestSkillModal() {
+    const modal = document.getElementById('suggestSkillModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('suggestSkillForm').reset();
+        // Reset radio buttons and show/hide groups
+        document.querySelector('input[name="skillOption"][value="existing"]').checked = true;
+        document.querySelector('input[name="categoryOption"][value="existing"]').checked = true;
+        toggleSkillInput();
+        toggleCategoryInput();
+    }, 300);
+}
+
+function toggleSkillInput() {
+    const existingGroup = document.getElementById('existingSkillGroup');
+    const newGroup = document.getElementById('newSkillGroup');
+    const suggestionNote = document.getElementById('suggestionNote');
+    const submitBtn = document.getElementById('submitSkillBtn');
+    const selectedOption = document.querySelector('input[name="skillOption"]:checked').value;
+    
+    if (selectedOption === 'existing') {
+        existingGroup.style.display = 'block';
+        newGroup.style.display = 'none';
+        suggestionNote.style.display = 'none';
+        submitBtn.textContent = 'Add Skill';
+        
+        // Set required fields
+        document.getElementById('existingSkillSelect').required = true;
+        document.getElementById('suggestSkillName').required = false;
+        document.getElementById('suggestSkillCategory').required = false;
+        document.getElementById('suggestCategoryName').required = false;
+    } else {
+        existingGroup.style.display = 'none';
+        newGroup.style.display = 'block';
+        suggestionNote.style.display = 'block';
+        submitBtn.textContent = 'Submit Suggestion';
+        
+        // Set required fields
+        document.getElementById('existingSkillSelect').required = false;
+        document.getElementById('suggestSkillName').required = true;
+        
+        // Trigger category input toggle to set proper required fields
+        toggleCategoryInput();
+    }
+}
+
+function populateExistingSkillsForSuggestion() {
+    const select = document.getElementById('existingSkillSelect');
+    const mySkillIds = new Set(mySkills.map(skill => skill.name));
+    
+    let options = '<option value="">Choose a skill</option>';
+    
+    Object.entries(allSkills).forEach(([category, skills]) => {
+        const availableSkills = skills.filter(skill => !mySkillIds.has(skill.name));
+        
+        if (availableSkills.length > 0) {
+            options += `<optgroup label="${category}">`;
+            availableSkills.forEach(skill => {
+                options += `<option value="${skill.id}">${skill.name}</option>`;
+            });
+            options += '</optgroup>';
+        }
+    });
+    
+    select.innerHTML = options;
+}
+
+function closeSuggestSkillModal() {
+    const modal = document.getElementById('suggestSkillModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('suggestSkillForm').reset();
+        // Reset radio buttons and show/hide groups
+        document.querySelector('input[name="skillOption"][value="existing"]').checked = true;
+        document.querySelector('input[name="categoryOption"][value="existing"]').checked = true;
+        toggleSkillInput();
+        toggleCategoryInput();
+    }, 300);
+}
+
+function populateSuggestSkillCategories() {
+    const select = document.getElementById('suggestSkillCategory');
+    
+    apiCall('/api/categories?type=skill').then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Failed to load categories');
+    }).then(data => {
+        if (data.categories) {
+            let options = '<option value="">Choose a category</option>';
+            data.categories.forEach(category => {
+                options += `<option value="${category.id}">${category.name}</option>`;
+            });
+            select.innerHTML = options;
+        }
+    }).catch(error => {
+        console.error('Error loading categories:', error);
+        showNotification('Failed to load categories', 'error');
+    });
+}
+
+function toggleCategoryInput() {
+    const existingGroup = document.getElementById('existingCategoryGroup');
+    const newGroup = document.getElementById('newCategoryGroup');
+    const selectedOption = document.querySelector('input[name="categoryOption"]:checked').value;
+    
+    if (selectedOption === 'existing') {
+        existingGroup.style.display = 'block';
+        newGroup.style.display = 'none';
+        document.getElementById('suggestSkillCategory').required = true;
+        document.getElementById('suggestCategoryName').required = false;
+    } else {
+        existingGroup.style.display = 'none';
+        newGroup.style.display = 'block';
+        document.getElementById('suggestSkillCategory').required = false;
+        document.getElementById('suggestCategoryName').required = true;
+    }
+}
+
+async function suggestSkill() {
+    const skillOption = document.querySelector('input[name="skillOption"]:checked').value;
+    const proficiencyLevel = document.getElementById('suggestProficiencyLevel').value;
+    const verificationLink = document.getElementById('suggestVerificationLink').value.trim();
+    const verificationNotes = document.getElementById('suggestVerificationNotes').value.trim();
+    
+    if (!proficiencyLevel) {
+        showNotification('Proficiency level is required', 'error');
+        return;
+    }
+    
+    const form = document.getElementById('suggestSkillForm');
+    form.classList.add('submitting');
+    
+    try {
+        let response;
+        
+        if (skillOption === 'existing') {
+            // Add existing skill to user profile
+            const skillId = document.getElementById('existingSkillSelect').value;
+            
+            if (!skillId) {
+                showNotification('Please select a skill', 'error');
+                form.classList.remove('submitting');
+                return;
+            }
+            
+            response = await apiCall('/api/user/skills', {
+                method: 'POST',
+                body: JSON.stringify({
+                    skill_id: parseInt(skillId),
+                    proficiency_level: proficiencyLevel,
+                    verification_link: verificationLink,
+                    verification_notes: verificationNotes
+                })
+            });
+            
+            if (response.ok) {
+                showNotification('Skill added successfully!', 'success');
+                closeSuggestSkillModal();
+                loadMySkills();
+                displayAvailableSkills();
+            } else {
+                const data = await response.json();
+                showNotification(data.error || 'Failed to add skill', 'error');
+            }
+        } else {
+            // Suggest new skill
+            const skillName = document.getElementById('suggestSkillName').value.trim();
+            const categoryOption = document.querySelector('input[name="categoryOption"]:checked').value;
+            const categoryId = categoryOption === 'existing' ? document.getElementById('suggestSkillCategory').value : null;
+            const categoryName = categoryOption === 'new' ? document.getElementById('suggestCategoryName').value.trim() : null;
+            const description = document.getElementById('suggestSkillDescription').value.trim();
+            
+            if (!skillName) {
+                showNotification('Skill name is required', 'error');
+                form.classList.remove('submitting');
+                return;
+            }
+            
+            if (categoryOption === 'existing' && !categoryId) {
+                showNotification('Please select a category', 'error');
+                form.classList.remove('submitting');
+                return;
+            }
+            
+            if (categoryOption === 'new' && !categoryName) {
+                showNotification('Please enter a category name', 'error');
+                form.classList.remove('submitting');
+                return;
+            }
+            
+            response = await apiCall('/api/volunteer/suggest-skill', {
+                method: 'POST',
+                body: JSON.stringify({
+                    skill_name: skillName,
+                    skill_description: description,
+                    category_option: categoryOption,
+                    category_id: categoryId ? parseInt(categoryId) : null,
+                    category_name: categoryName,
+                    proficiency_level: proficiencyLevel,
+                    verification_link: verificationLink,
+                    verification_notes: verificationNotes
+                })
+            });
+            
+            if (response.ok) {
+                showNotification('Skill suggestion submitted successfully! It will be reviewed by administrators.', 'success');
+                closeSuggestSkillModal();
+                loadMySkills();
+            } else {
+                const data = await response.json();
+                showNotification(data.error || 'Failed to submit skill suggestion', 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Suggest skill error:', error);
+        showNotification('Failed to process skill request', 'error');
+    } finally {
+        form.classList.remove('submitting');
+    }
+}
+
+// PROFICIENCY TOGGLE FUNCTIONS
+function toggleProficiency(userSkillId) {
+    const skill = mySkills.find(s => s.id === userSkillId);
+    if (!skill) return;
+    
+    const levels = ['beginner', 'intermediate', 'expert'];
+    const currentIndex = levels.indexOf(skill.proficiency_level);
+    const nextIndex = (currentIndex + 1) % levels.length;
+    const newLevel = levels[nextIndex];
+    
+    updateProficiencyLevel(userSkillId, newLevel);
+}
+
+async function updateProficiencyLevel(userSkillId, newLevel) {
+    try {
+        const response = await apiCall(`/api/user/skills/${userSkillId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                proficiency_level: newLevel
+            })
+        });
+        
+        if (response.ok) {
+            // Update the skill in local array
+            const skill = mySkills.find(s => s.id === userSkillId);
+            if (skill) {
+                skill.proficiency_level = newLevel;
+            }
+            
+            // Update the UI element
+            const badge = document.querySelector(`[data-skill-id="${userSkillId}"]`);
+            if (badge) {
+                badge.className = `proficiency-badge proficiency-${newLevel}`;
+                badge.textContent = newLevel.charAt(0).toUpperCase() + newLevel.slice(1);
+                badge.setAttribute('data-current-level', newLevel);
+            }
+            
+            showNotification(`Proficiency updated to ${newLevel}!`, 'success');
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to update proficiency', 'error');
+        }
+    } catch (error) {
+        console.error('Update proficiency error:', error);
+        showNotification('Failed to update proficiency', 'error');
+    }
+}
+
+async function removeSkillDirect(userSkillId, skillName) {
+    if (!confirm(`Are you sure you want to remove "${skillName}" from your skills?`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/user/skills/${userSkillId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Skill removed successfully!', 'success');
+            loadMySkills();
+            loadAllSkills();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to remove skill', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to remove skill');
+    }
+}
+
+// APPROVAL FUNCTIONS
+async function approveCategory(categoryId) {
+    await handleApproval('category', categoryId, 'approve');
+}
+
+async function rejectCategory(categoryId) {
+    await handleApproval('category', categoryId, 'reject');
+}
+
+async function approveItem(type, itemId) {
+    await handleApproval(type, itemId, 'approve');
+}
+
+async function rejectItem(type, itemId) {
+    await handleApproval(type, itemId, 'reject');
+}
+
+async function handleApproval(type, itemId, action) {
+    try {
+        const endpoint = `/api/admin/approve-${type}/${itemId}`;
+        const response = await apiCall(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify({ action })
+        });
+        
+        if (response.ok) {
+            showNotification(`${type} ${action}d successfully!`, 'success');
+            loadAdminData(); // Reload all admin data
+        } else {
+            const data = await response.json();
+            showNotification(data.error || `Failed to ${action} ${type}`, 'error');
+        }
+    } catch (error) {
+        handleApiError(error, `Failed to ${action} ${type}`);
+    }
+}
+
+// UTILITY FUNCTIONS
+function getSkillCategoryIcon(category) {
+    const icons = {
+        'Medical': 'fas fa-heartbeat',
+        'Technical': 'fas fa-laptop-code',
+        'Communication': 'fas fa-comments',
+        'Transportation': 'fas fa-truck',
+        'Construction': 'fas fa-hammer',
+        'Education': 'fas fa-graduation-cap',
+        'Food & Nutrition': 'fas fa-utensils',
+        'Security': 'fas fa-shield-alt',
+        'default': 'fas fa-cog'
+    };
+    return icons[category] || icons.default;
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', function(e) {
+    const modals = ['createCategoryModal', 'createSkillModal', 'editCategoryModal', 'editSkillModal2', 'addSkillModal', 'editSkillModal', 'suggestSkillModal'];
+    modals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (e.target === modal) {
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                // Reset forms when closing
+                const form = modal.querySelector('form');
+                if (form) form.reset();
+                // Hide proficiency descriptions
+                modal.querySelectorAll('.proficiency-desc').forEach(desc => {
+                    desc.style.display = 'none';
+                });
+                // Reset suggest skill modal specific elements
+                if (modalId === 'suggestSkillModal') {
+                    document.querySelector('input[name="skillOption"][value="existing"]').checked = true;
+                    document.querySelector('input[name="categoryOption"][value="existing"]').checked = true;
+                    toggleSkillInput();
+                    toggleCategoryInput();
+                }
+            }, 300);
+        }
+    });
+});
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const openModal = document.querySelector('.modal.show');
+        if (openModal) {
+            openModal.classList.remove('show');
+            setTimeout(() => {
+                openModal.style.display = 'none';
+                const form = openModal.querySelector('form');
+                if (form) form.reset();
+                openModal.querySelectorAll('.proficiency-desc').forEach(desc => {
+                    desc.style.display = 'none';
+                });
+                // Reset suggest skill modal specific elements
+                if (openModal.id === 'suggestSkillModal') {
+                    document.querySelector('input[name="skillOption"][value="existing"]').checked = true;
+                    document.querySelector('input[name="categoryOption"][value="existing"]').checked = true;
+                    toggleSkillInput();
+                    toggleCategoryInput();
+                }
+            }, 300);
+        }
+    }
+});
+</script>
+
+<style>
+/* Modal styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+/* Volunteer Card Styles */
+.volunteer-card {
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+
+.volunteer-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.volunteer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.volunteer-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.proficiency-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.proficiency-badge.proficiency-beginner {
+    background: #28a745;
+    color: white;
+}
+
+.proficiency-badge.proficiency-intermediate {
+    background: #ffc107;
+    color: #212529;
+}
+
+.proficiency-badge.proficiency-expert {
+    background: #dc3545;
+    color: white;
+}
+
+.verified-icon {
+    color: #28a745;
+    margin-left: 10px;
+    font-size: 1.2rem;
+}
+
+.volunteer-details {
+    margin-bottom: 15px;
+}
+
+.volunteer-details p {
+    margin: 8px 0;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.volunteer-details i {
+    width: 16px;
+    color: #007bff;
+}
+
+.volunteer-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.volunteers-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.search-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: end;
+}
+
+.search-filters select {
+    padding: 8px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    min-width: 200px;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(-20px);
+    transition: all 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.modal-header {
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.modal-form {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background: #fafafa;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #dc3545;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 6px;
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 24px;
+}
+
+.modal-actions .btn {
+    min-width: 100px;
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.modal-actions .btn-primary {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.modal-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+.modal-actions .btn-secondary {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    color: #666;
+}
+
+.modal-actions .btn-secondary:hover {
+    background: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.modal-actions .btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.modal-actions .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+/* Proficiency descriptions styling */
+.proficiency-descriptions {
+    margin-top: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border-left: 4px solid #dc3545;
+}
+
+.proficiency-desc {
+    display: none;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding: 8px 0;
+}
+
+.proficiency-desc strong {
+    color: #dc3545;
+}
+
+/* Loading states */
+.form-group.loading input,
+.form-group.loading select,
+.form-group.loading textarea {
+    background: #f8f9fa;
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* Form validation states */
+.form-group.error input,
+.form-group.error select,
+.form-group.error textarea {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.form-group.success input,
+.form-group.success select,
+.form-group.success textarea {
+    border-color: #28a745;
+    background: #f8fff9;
+}
+
+/* Proficiency toggle styles */
+.proficiency-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.proficiency-toggle:hover {
+    transform: scale(1.05);
+}
+
+.proficiency-toggle .toggle-icon {
+    color: #666;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.proficiency-toggle:hover .toggle-icon {
+    color: #dc3545;
+    transform: rotate(180deg);
+}
+
+/* Skill suggestion styles */
+.suggest-skill-option {
+    margin-top: 8px;
+    text-align: center;
+}
+
+.suggest-skill-option a {
+    color: #dc3545;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.suggest-skill-option a:hover {
+    text-decoration: underline;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.radio-option:hover {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+    width: auto;
+}
+
+.radio-option input[type="radio"]:checked + span {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.suggestion-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border-radius: 8px;
+    border-left: 4px solid #2196f3;
+    margin-top: 20px;
+}
+
+.suggestion-note i {
+    color: #2196f3;
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.suggestion-note p {
+    margin: 0;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 20px;
+        max-height: calc(100vh - 40px);
+    }
+    
+    .modal-header {
+        padding: 20px 20px 16px;
+    }
+    
+    .modal-form {
+        padding: 20px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
+
+/* Animation for form submission */
+.modal-form.submitting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.modal-form.submitting .btn-primary {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.modal-form.submitting .btn-primary::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* General button styles */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn i {
+    font-size: 0.9em;
+}
+
+/* Role-based sections */
+.role-section {
+    margin-top: 20px;
+}
+.role-section {
+    margin-top: 20px;
+}
+
+.section-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.tab-btn {
+    padding: 12px 24px;
+    border: none;
+    background: transparent;
+    color: #666;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab-btn.active {
+    color: #dc3545;
+    border-bottom-color: #dc3545;
+}
+
+.tab-btn:hover {
+    color: #dc3545;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Admin styles */
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.admin-card {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    background: white;
+    transition: all 0.3s;
+}
+
+.admin-card.approved {
+    border-color: #28a745;
+}
+
+.admin-card.pending {
+    border-color: #ffc107;
+}
+
+.admin-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.card-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.category-type {
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.card-content {
+    margin-bottom: 15px;
+}
+
+.card-content p {
+    color: #666;
+    margin: 10px 0;
+}
+
+.card-content small {
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.card-actions .btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.card-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.card-actions .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.card-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.card-actions .btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.card-actions .btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.card-actions .btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+.approvals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.approval-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+}
+
+.approval-info {
+    flex: 1;
+}
+
+.approval-type {
+    font-weight: bold;
+    color: #dc3545;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.approval-description {
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.approval-date {
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.approval-actions .btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.approval-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.approval-actions .btn-success:hover {
+    background: #218838;
+}
+
+.approval-actions .btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.approval-actions .btn-danger:hover {
+    background: #c82333;
+}
+
+/* Organization styles */
+.search-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    align-items: end;
+}
+
+.search-filters select {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    min-width: 200px;
+}
+
+.volunteers-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.volunteer-card {
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    background: white;
+    transition: all 0.3s;
+}
+
+.volunteer-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.volunteer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.volunteer-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.volunteer-details {
+    margin-bottom: 15px;
+}
+
+.volunteer-details p {
+    margin: 8px 0;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.volunteer-details i {
+    width: 16px;
+    color: #dc3545;
+}
+
+.volunteer-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.skills-browser {
+    /* Reuse existing skill category styles */
+}
+
+.skill-browser-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.skill-browser-item:hover {
+    border-color: #dc3545;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.skill-browser-item .btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* Existing volunteer styles */
+.skills-overview {
+    margin-bottom: 40px;
+}
+
+.skills-sections {
+    display: grid;
+    gap: 40px;
+}
+
+.skills-section {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    width: 250px;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.skill-card {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    transition: all 0.3s;
+}
+
+.skill-card.verified {
+    border-color: #28a745;
+}
+
+.skill-card.pending {
+    border-color: #ffc107;
+}
+
+.skill-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.skill-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.skill-icon {
+    font-size: 2rem;
+    color: #dc3545;
+}
+
+.skill-info {
+    flex: 1;
+}
+
+.skill-info h3 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.skill-category {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.skill-status {
+    font-size: 1.2rem;
+}
+
+.verified-icon {
+    color: #28a745;
+}
+
+.pending-icon {
+    color: #ffc107;
+}
+
+.skill-details {
+    margin-bottom: 15px;
+}
+
+.proficiency-level {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.proficiency-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.proficiency-badge.proficiency-beginner {
+    background: #e9ecef;
+    color: #333;
+}
+
+.proficiency-badge.proficiency-intermediate {
+    background: #ffc107;
+    color: #333;
+}
+
+.proficiency-badge.proficiency-expert {
+    background: #dc3545;
+    color: white;
+}
+
+.skill-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 10px 0;
+}
+
+.skill-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.skill-meta small {
+    color: #999;
+    font-size: 0.8rem;
+}
+
+.skill-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.skill-category-section {
+    margin-bottom: 30px;
+}
+
+.category-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.3rem;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 10px;
+}
+
+.category-skills {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.skills-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.skill-item {
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.skill-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+.skill-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+    font-size: 1rem;
+}
+
+.skill-desc {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.skill-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.skill-actions .btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+}
+
+.skill-actions .btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+.skill-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.skill-actions .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.skill-actions .btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.skill-actions .btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+.skill-actions .btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.skill-actions .btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.skill-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.skill-actions .btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+/* Make sure icons are visible */
+.skill-actions .btn i {
+    font-size: 0.8rem;
+}
+
+.card-actions .btn i {
+    font-size: 0.8rem;
+}
+
+.skill-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.skill-desc {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.available-skill-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.available-skill-item:hover {
+    border-color: #dc3545;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.available-skill-item .btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.proficiency-descriptions {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.proficiency-desc {
+    display: none;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.verification-link {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #e8f5e8;
+    border-radius: 5px;
+    border-left: 3px solid #28a745;
+}
+
+.verification-link a {
+    color: #28a745;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.verification-link a:hover {
+    text-decoration: underline;
+}
+
+.verification-notes {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    border-left: 3px solid #6c757d;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-style: italic;
+}
+</style>
+{% endblock %}

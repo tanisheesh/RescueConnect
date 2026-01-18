@@ -1,0 +1,1391 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>System Administration</h1>
+        <div class="user-info">
+            <span id="userGreeting">Welcome back!</span>
+            <span class="user-type">Administrator</span>
+        </div>
+    </div>
+    
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="totalUsers">0</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-hands-helping"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="totalVolunteers">0</div>
+                <div class="stat-label">Active Volunteers</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="totalOrganizations">0</div>
+                <div class="stat-label">Organizations</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-number" id="totalRequests">0</div>
+                <div class="stat-label">Emergency Requests</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-content">
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Quick Actions</h2>
+            </div>
+            <div class="quick-actions">
+                <a href="#" class="action-card" onclick="manageUsers()">
+                    <i class="fas fa-users-cog"></i>
+                    <span>Manage Users</span>
+                </a>
+                <a href="#" class="action-card" onclick="manageOrganizations()">
+                    <i class="fas fa-building"></i>
+                    <span>Manage Organizations</span>
+                </a>
+                <a href="#" class="action-card" onclick="systemReports()">
+                    <i class="fas fa-chart-line"></i>
+                    <span>System Reports</span>
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Recent Activity</h2>
+                <button class="btn btn-primary btn-small" id="refreshActivity">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="activity-feed" id="activityFeed">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading system activity...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>System Overview</h2>
+                <div class="section-controls">
+                    <select id="timeRangeFilter">
+                        <option value="24h">Last 24 Hours</option>
+                        <option value="7d" selected>Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="system-overview">
+                <div class="overview-grid">
+                    <div class="overview-card">
+                        <h4>Emergency Requests by Priority</h4>
+                        <div class="priority-breakdown" id="priorityBreakdown">
+                            <div class="priority-item">
+                                <span class="priority-dot critical"></span>
+                                <span>Critical: <strong id="criticalCount">0</strong></span>
+                            </div>
+                            <div class="priority-item">
+                                <span class="priority-dot high"></span>
+                                <span>High: <strong id="highCount">0</strong></span>
+                            </div>
+                            <div class="priority-item">
+                                <span class="priority-dot medium"></span>
+                                <span>Medium: <strong id="mediumCount">0</strong></span>
+                            </div>
+                            <div class="priority-item">
+                                <span class="priority-dot low"></span>
+                                <span>Low: <strong id="lowCount">0</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-card">
+                        <h4>User Verification Status</h4>
+                        <div class="verification-stats" id="verificationStats">
+                            <div class="stat-row">
+                                <span>Verified Users:</span>
+                                <strong id="verifiedUsers">0</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>Pending Verification:</span>
+                                <strong id="pendingUsers">0</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>Verified Skills:</span>
+                                <strong id="verifiedSkills">0</strong>
+                            </div>
+                            <div class="stat-row">
+                                <span>Pending Skills:</span>
+                                <strong id="pendingSkills">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-card">
+                        <h4>Response Metrics</h4>
+                        <div class="response-metrics" id="responseMetrics">
+                            <div class="metric-item">
+                                <span>Avg Response Time:</span>
+                                <strong id="avgResponseTime">0h</strong>
+                            </div>
+                            <div class="metric-item">
+                                <span>Success Rate:</span>
+                                <strong id="successRate">0%</strong>
+                            </div>
+                            <div class="metric-item">
+                                <span>Active Assignments:</span>
+                                <strong id="activeAssignments">0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Pending Approvals</h2>
+            </div>
+            <div class="pending-approvals" id="pendingApprovals">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Loading pending approvals...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin dashboard loading...');
+    
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    console.log('Current user:', currentUser);
+    
+    if (currentUser.user_type !== 'admin') {
+        console.log('User is not admin, redirecting...');
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    console.log('Initializing admin dashboard...');
+    initializeAdminDashboard();
+    loadAdminData();
+});
+
+function initializeAdminDashboard() {
+    document.getElementById('userGreeting').textContent = `Welcome back, ${currentUser.full_name}!`;
+    
+    // Set up event listeners
+    document.getElementById('refreshActivity').addEventListener('click', loadSystemActivity);
+    document.getElementById('timeRangeFilter').addEventListener('change', loadSystemOverview);
+}
+
+async function loadAdminData() {
+    await Promise.all([
+        loadSystemStats(),
+        loadSystemActivity(),
+        loadSystemOverview(),
+        loadPendingApprovals()
+    ]);
+}
+
+async function loadSystemStats() {
+    try {
+        const response = await apiCall('/api/admin/stats');
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateSystemStats(data.stats);
+        }
+    } catch (error) {
+        console.error('Error loading system stats:', error);
+        // Set default values
+        document.getElementById('totalUsers').textContent = '0';
+        document.getElementById('totalVolunteers').textContent = '0';
+        document.getElementById('totalOrganizations').textContent = '0';
+        document.getElementById('totalRequests').textContent = '0';
+    }
+}
+
+async function loadSystemActivity() {
+    try {
+        const response = await apiCall('/api/admin/activity');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displaySystemActivity(data.activities);
+        }
+    } catch (error) {
+        console.error('Error loading system activity:', error);
+        document.getElementById('activityFeed').innerHTML = '<div class="no-data">No recent activity</div>';
+    }
+}
+
+async function loadSystemOverview() {
+    const timeRange = document.getElementById('timeRangeFilter').value;
+    
+    try {
+        const response = await apiCall(`/api/admin/overview?range=${timeRange}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            updateSystemOverview(data.overview);
+        }
+    } catch (error) {
+        console.error('Error loading system overview:', error);
+    }
+}
+
+async function loadPendingApprovals() {
+    try {
+        const response = await apiCall('/api/admin/pending');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayPendingApprovals(data.pending);
+        }
+    } catch (error) {
+        console.error('Error loading pending approvals:', error);
+        document.getElementById('pendingApprovals').innerHTML = '<div class="no-data">No pending approvals</div>';
+    }
+}
+
+function updateSystemStats(stats) {
+    document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+    document.getElementById('totalVolunteers').textContent = stats.totalVolunteers || 0;
+    document.getElementById('totalOrganizations').textContent = stats.totalOrganizations || 0;
+    document.getElementById('totalRequests').textContent = stats.totalRequests || 0;
+}
+
+function displaySystemActivity(activities) {
+    const container = document.getElementById('activityFeed');
+    
+    if (activities.length === 0) {
+        container.innerHTML = '<div class="no-data">No recent important activity</div>';
+        return;
+    }
+    
+    container.innerHTML = activities.slice(0, 15).map(activity => `
+        <div class="activity-item">
+            <div class="activity-icon ${getActivityIconClass(activity.action)}">
+                <i class="${getActivityIcon(activity.action)}"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-description">${formatActivityDescription(activity)}</div>
+                <div class="activity-meta">
+                    <span class="activity-user">${activity.user_name} (${activity.user_type})</span>
+                    <span class="activity-time">${formatRelativeTime(activity.created_at)}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateSystemOverview(overview) {
+    // Update priority breakdown
+    document.getElementById('criticalCount').textContent = overview.priorityBreakdown?.critical || 0;
+    document.getElementById('highCount').textContent = overview.priorityBreakdown?.high || 0;
+    document.getElementById('mediumCount').textContent = overview.priorityBreakdown?.medium || 0;
+    document.getElementById('lowCount').textContent = overview.priorityBreakdown?.low || 0;
+    
+    // Update verification stats
+    document.getElementById('verifiedUsers').textContent = overview.verificationStats?.verifiedUsers || 0;
+    document.getElementById('pendingUsers').textContent = overview.verificationStats?.pendingUsers || 0;
+    document.getElementById('verifiedSkills').textContent = overview.verificationStats?.verifiedSkills || 0;
+    document.getElementById('pendingSkills').textContent = overview.verificationStats?.pendingSkills || 0;
+    
+    // Update response metrics
+    document.getElementById('avgResponseTime').textContent = overview.responseMetrics?.avgResponseTime || '0h';
+    document.getElementById('successRate').textContent = overview.responseMetrics?.successRate || '0%';
+    document.getElementById('activeAssignments').textContent = overview.responseMetrics?.activeAssignments || 0;
+}
+
+function displayPendingApprovals(pending) {
+    const container = document.getElementById('pendingApprovals');
+    
+    if (pending.length === 0) {
+        container.innerHTML = '<div class="no-data">No pending approvals</div>';
+        return;
+    }
+    
+    // Separate user approvals (including organizations) from other types
+    const userApprovals = pending.filter(item => item.type === 'user');
+    const otherApprovals = pending.filter(item => item.type !== 'user');
+    
+    let html = '';
+    
+    // Show user/organization approvals with link to manage pages
+    if (userApprovals.length > 0) {
+        html += `
+            <div class="approval-section">
+                <h4>User & Organization Approvals (${userApprovals.length})</h4>
+                <div class="approval-summary">
+                    ${userApprovals.slice(0, 3).map(item => `
+                        <div class="approval-item-summary">
+                            <span>${item.description}</span>
+                            <small>${formatRelativeTime(item.created_at)}</small>
+                        </div>
+                    `).join('')}
+                    ${userApprovals.length > 3 ? `<div class="approval-more">+${userApprovals.length - 3} more...</div>` : ''}
+                </div>
+                <div class="approval-actions">
+                    <button class="btn btn-primary btn-small" onclick="window.location.href='/manage-users'">
+                        <i class="fas fa-users"></i> Manage Users
+                    </button>
+                    <button class="btn btn-primary btn-small" onclick="window.location.href='/manage-organizations'">
+                        <i class="fas fa-building"></i> Manage Organizations
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Show other approvals (skills, categories, etc.)
+    if (otherApprovals.length > 0) {
+        html += `
+            <div class="approval-section">
+                <h4>Other Approvals (${otherApprovals.length})</h4>
+                ${otherApprovals.map(item => `
+                    <div class="approval-item">
+                        <div class="approval-info">
+                            <h5>${item.type === 'user_skill' ? 'Skill Verification' : item.type === 'skill' ? 'New Skill' : 'New Category'}</h5>
+                            <p>${item.description}</p>
+                            <small>Submitted: ${formatRelativeTime(item.created_at)}</small>
+                        </div>
+                        <div class="approval-actions">
+                            <button class="btn btn-success btn-small" onclick="approveItem('${item.type}', ${item.id})">
+                                Approve
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="rejectItem('${item.type}', ${item.id})">
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function getActivityIcon(action) {
+    const icons = {
+        'user_registered': 'fas fa-user-plus',
+        'user_approved': 'fas fa-user-check',
+        'user_rejected': 'fas fa-user-times',
+        'organization_created': 'fas fa-building',
+        'category_created': 'fas fa-folder-plus',
+        'category_approved': 'fas fa-check-circle',
+        'category_rejected': 'fas fa-times-circle',
+        'skill_created': 'fas fa-plus-circle',
+        'skill_approved': 'fas fa-certificate',
+        'skill_rejected': 'fas fa-ban',
+        'request_approved': 'fas fa-exclamation-triangle',
+        'request_rejected': 'fas fa-times-circle',
+        'emergency_request_created': 'fas fa-plus-square',
+        'skill_verified': 'fas fa-check-double',
+        'user_skill_verified': 'fas fa-award'
+    };
+    return icons[action] || 'fas fa-info-circle';
+}
+
+function getActivityIconClass(action) {
+    if (action.includes('approved') || action.includes('verified') || action.includes('created')) {
+        return 'success';
+    } else if (action.includes('rejected') || action.includes('banned')) {
+        return 'danger';
+    } else if (action.includes('pending') || action.includes('registered')) {
+        return 'warning';
+    }
+    return 'info';
+}
+
+function formatActivityDescription(activity) {
+    const descriptions = {
+        'user_registered': `New ${activity.user_type} registered`,
+        'user_approved': `User approved`,
+        'user_rejected': `User rejected`,
+        'organization_created': `New organization created`,
+        'category_created': `New category created`,
+        'category_approved': `Category approved`,
+        'category_rejected': `Category rejected`,
+        'skill_created': `New skill created`,
+        'skill_approved': `Skill approved`,
+        'skill_rejected': `Skill rejected`,
+        'request_approved': `Emergency request approved`,
+        'request_rejected': `Emergency request rejected`,
+        'emergency_request_created': `New emergency request created`,
+        'skill_verified': `Skill verification completed`,
+        'user_skill_verified': `User skill verified`
+    };
+    
+    let description = descriptions[activity.action] || activity.action.replace(/_/g, ' ');
+    
+    // Add details if available and relevant
+    if (activity.details && activity.details.length > 0) {
+        const details = activity.details.substring(0, 60);
+        description += ` - ${details}${activity.details.length > 60 ? '...' : ''}`;
+    }
+    
+    return description;
+}
+
+async function approveItem(type, id) {
+    try {
+        const response = await apiCall(`/api/admin/approve/${type}/${id}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification(`${type} approved successfully!`, 'success');
+            loadPendingApprovals();
+            loadSystemStats();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to approve item', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to approve item');
+    }
+}
+
+async function rejectItem(type, id) {
+    if (!confirm(`Are you sure you want to reject this ${type}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/admin/reject/${type}/${id}`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification(`${type} rejected successfully!`, 'success');
+            loadPendingApprovals();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Failed to reject item', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to reject item');
+    }
+}
+
+function manageUsers() {
+    window.location.href = '/manage-users';
+}
+
+function manageOrganizations() {
+    window.location.href = '/manage-organizations';
+}
+
+function systemReports() {
+    window.location.href = '/system-reports';
+}
+
+
+
+// Modal functions
+function openManageUsersModal() {
+    const modal = document.getElementById('manageUsersModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeManageUsersModal() {
+    const modal = document.getElementById('manageUsersModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+function openManageOrganizationsModal() {
+    const modal = document.getElementById('manageOrganizationsModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeManageOrganizationsModal() {
+    const modal = document.getElementById('manageOrganizationsModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+
+
+function openUserDetailsModal() {
+    const modal = document.getElementById('userDetailsModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeUserDetailsModal() {
+    const modal = document.getElementById('userDetailsModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+// Data loading functions
+async function loadAllUsers() {
+    try {
+        const response = await apiCall('/api/admin/users');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayUsersTable(data.users);
+        } else {
+            document.getElementById('usersTableBody').innerHTML = 
+                '<tr><td colspan="6" class="error">Failed to load users</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        document.getElementById('usersTableBody').innerHTML = 
+            '<tr><td colspan="6" class="error">Error loading users</td></tr>';
+    }
+}
+
+async function loadAllOrganizations() {
+    try {
+        const response = await apiCall('/api/admin/organizations');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayOrganizationsTable(data.organizations);
+        } else {
+            document.getElementById('organizationsTableBody').innerHTML = 
+                '<tr><td colspan="5" class="error">Failed to load organizations</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading organizations:', error);
+        document.getElementById('organizationsTableBody').innerHTML = 
+            '<tr><td colspan="5" class="error">Error loading organizations</td></tr>';
+    }
+}
+
+async function loadSystemReports() {
+    try {
+        const response = await apiCall('/api/admin/reports/system');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displaySystemReports(data.reports);
+        } else {
+            document.querySelectorAll('.report-content').forEach(el => {
+                el.innerHTML = 'Failed to load reports';
+            });
+        }
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        document.querySelectorAll('.report-content').forEach(el => {
+            el.innerHTML = 'Error loading reports';
+        });
+    }
+}
+
+async function loadUserDetails(userId) {
+    try {
+        const response = await apiCall(`/api/admin/users/${userId}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayUserDetails(data.user);
+        } else {
+            document.getElementById('userDetailsContent').innerHTML = 
+                '<div class="error">Failed to load user details</div>';
+        }
+    } catch (error) {
+        console.error('Error loading user details:', error);
+        document.getElementById('userDetailsContent').innerHTML = 
+            '<div class="error">Error loading user details</div>';
+    }
+}
+
+// Display functions
+function displayUsersTable(users) {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No users found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => `
+        <tr>
+            <td>${user.id}</td>
+            <td>${user.full_name}</td>
+            <td><span class="user-type-badge ${user.user_type}">${user.user_type}</span></td>
+            <td>${user.state}</td>
+            <td><span class="status-badge ${user.verification_status}">${user.verification_status}</span></td>
+            <td>
+                <button class="btn btn-small btn-primary" onclick="viewUserDetails(${user.id})">
+                    <i class="fas fa-eye"></i> View
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function displayOrganizationsTable(organizations) {
+    const tbody = document.getElementById('organizationsTableBody');
+    
+    if (organizations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">No organizations found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = organizations.map(org => `
+        <tr>
+            <td>${org.id}</td>
+            <td>${org.full_name}</td>
+            <td>${org.state}</td>
+            <td><span class="status-badge ${org.verification_status}">${org.verification_status}</span></td>
+            <td>
+                <button class="btn btn-small btn-primary" onclick="viewUserDetails(${org.id})">
+                    <i class="fas fa-eye"></i> View
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function displaySystemReports(reports) {
+    // Registration Trends
+    const registrationTrends = document.getElementById('registrationTrends');
+    if (reports.registrationTrends.length > 0) {
+        const trendsHtml = reports.registrationTrends.map(trend => 
+            `<div class="trend-item">
+                <span class="trend-date">${formatDate(trend.date)}</span>
+                <span class="trend-type">${trend.user_type}</span>
+                <span class="trend-count">${trend.count} registrations</span>
+            </div>`
+        ).join('');
+        registrationTrends.innerHTML = trendsHtml;
+    } else {
+        registrationTrends.innerHTML = '<div class="no-data">No registration data available</div>';
+    }
+    
+    // Skills Distribution
+    const skillsDistribution = document.getElementById('skillsDistribution');
+    if (reports.skillsDistribution.length > 0) {
+        const skillsHtml = reports.skillsDistribution.map(skill => 
+            `<div class="skill-item">
+                <span class="skill-category">${skill.category}</span>
+                <span class="skill-count">${skill.count} users</span>
+            </div>`
+        ).join('');
+        skillsDistribution.innerHTML = skillsHtml;
+    } else {
+        skillsDistribution.innerHTML = '<div class="no-data">No skills data available</div>';
+    }
+    
+    // Requests by State
+    const requestsByState = document.getElementById('requestsByState');
+    if (reports.requestsByState.length > 0) {
+        const requestsHtml = reports.requestsByState.map(req => 
+            `<div class="state-item">
+                <span class="state-name">${req.state}</span>
+                <span class="state-count">${req.count} requests</span>
+            </div>`
+        ).join('');
+        requestsByState.innerHTML = requestsHtml;
+    } else {
+        requestsByState.innerHTML = '<div class="no-data">No requests data available</div>';
+    }
+    
+    // Verification Summary
+    const verificationSummary = document.getElementById('verificationSummary');
+    if (reports.verificationSummary.length > 0) {
+        const summaryHtml = reports.verificationSummary.map(summary => 
+            `<div class="verification-item">
+                <span class="verification-type">${summary.user_type}</span>
+                <span class="verification-status">${summary.verification_status}</span>
+                <span class="verification-count">${summary.count} users</span>
+            </div>`
+        ).join('');
+        verificationSummary.innerHTML = summaryHtml;
+    } else {
+        verificationSummary.innerHTML = '<div class="no-data">No verification data available</div>';
+    }
+}
+
+function displayUserDetails(user) {
+    document.getElementById('userDetailsTitle').textContent = `${user.full_name} - Details`;
+    
+    let detailsHtml = `
+        <div class="user-details-container">
+            <div class="user-basic-info">
+                <h3>Basic Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>ID:</label>
+                        <span>${user.id}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Name:</label>
+                        <span>${user.full_name}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Email:</label>
+                        <span>${user.email}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Phone:</label>
+                        <span>${user.phone || 'Not provided'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Type:</label>
+                        <span class="user-type-badge ${user.user_type}">${user.user_type}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Status:</label>
+                        <span class="status-badge ${user.verification_status}">${user.verification_status}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Location:</label>
+                        <span>${user.district}, ${user.state}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Address:</label>
+                        <span>${user.address || 'Not provided'}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Joined:</label>
+                        <span>${formatDate(user.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+    `;
+    
+    // Add skills section for volunteers
+    if (user.user_type === 'volunteer' && user.skills) {
+        detailsHtml += `
+            <div class="user-skills-section">
+                <h3>Skills (${user.skills.length})</h3>
+                <div class="skills-grid">
+                    ${user.skills.map(skill => `
+                        <div class="skill-card ${skill.is_verified ? 'verified' : 'pending'}">
+                            <div class="skill-name">${skill.skill_name}</div>
+                            <div class="skill-category">${skill.category_name}</div>
+                            <div class="skill-level">${skill.proficiency_level}</div>
+                            <div class="skill-status">${skill.is_verified ? 'Verified' : 'Pending'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Add assignments section
+        if (user.assignments && user.assignments.length > 0) {
+            detailsHtml += `
+                <div class="user-assignments-section">
+                    <h3>Past Work / Assignments (${user.assignments.length})</h3>
+                    <div class="assignments-list">
+                        ${user.assignments.map(assignment => `
+                            <div class="assignment-card">
+                                <div class="assignment-title">${assignment.title}</div>
+                                <div class="assignment-org">Organization: ${assignment.organization_name}</div>
+                                <div class="assignment-status">Status: ${assignment.status}</div>
+                                <div class="assignment-date">Applied: ${formatDate(assignment.created_at)}</div>
+                                ${assignment.accepted_at ? `<div class="assignment-date">Accepted: ${formatDate(assignment.accepted_at)}</div>` : ''}
+                                ${assignment.completed_at ? `<div class="assignment-date">Completed: ${formatDate(assignment.completed_at)}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Add emergency requests section for organizations
+    if (user.user_type === 'organization' && user.emergency_requests) {
+        detailsHtml += `
+            <div class="user-requests-section">
+                <h3>Emergency Requests (${user.emergency_requests.length})</h3>
+                <div class="requests-list">
+                    ${user.emergency_requests.map(request => `
+                        <div class="request-card">
+                            <div class="request-title">${request.title}</div>
+                            <div class="request-priority">Priority: ${request.priority_level}</div>
+                            <div class="request-volunteers">Volunteers Needed: ${request.volunteers_needed}</div>
+                            <div class="request-status">Status: ${request.status}</div>
+                            <div class="request-approved">${request.is_approved ? 'Approved' : 'Pending Approval'}</div>
+                            <div class="request-date">Created: ${formatDate(request.created_at)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add recent activity section
+    if (user.recent_activity && user.recent_activity.length > 0) {
+        detailsHtml += `
+            <div class="user-activity-section">
+                <h3>Recent Activity (${user.recent_activity.length})</h3>
+                <div class="activity-list">
+                    ${user.recent_activity.map(activity => `
+                        <div class="activity-item">
+                            <div class="activity-action">${activity.action.replace(/_/g, ' ')}</div>
+                            <div class="activity-details">${activity.details}</div>
+                            <div class="activity-date">${formatDate(activity.created_at)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    detailsHtml += '</div>';
+    
+    document.getElementById('userDetailsContent').innerHTML = detailsHtml;
+}
+
+function viewUserDetails(userId) {
+    openUserDetailsModal();
+    loadUserDetails(userId);
+}
+</script>
+
+<style>
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.overview-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.overview-card h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.priority-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.priority-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.priority-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.priority-dot.critical { background: #dc3545; }
+.priority-dot.high { background: #fd7e14; }
+.priority-dot.medium { background: #ffc107; }
+.priority-dot.low { background: #28a745; }
+
+.verification-stats,
+.response-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-row,
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.stat-row:last-child,
+.metric-item:last-child {
+    border-bottom: none;
+}
+
+.activity-feed {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc3545;
+}
+
+.activity-icon.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.activity-icon.danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.activity-icon.warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.activity-icon.info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-description {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.activity-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.activity-user {
+    font-weight: 500;
+    color: #495057;
+}
+
+.activity-time {
+    color: #6c757d;
+}
+
+.approval-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.approval-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.approval-section h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.approval-summary {
+    margin-bottom: 15px;
+}
+
+.approval-item-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 8px;
+}
+
+.approval-item-summary span {
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.approval-item-summary small {
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.approval-more {
+    text-align: center;
+    padding: 8px;
+    color: #666;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.approval-info h5 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.approval-info p {
+    margin: 0 0 5px 0;
+    color: #666;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Large modal styles */
+.large-modal {
+    max-width: 90%;
+    width: 1200px;
+    max-height: 90vh;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Table styles */
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    position: sticky;
+    top: 0;
+}
+
+.data-table tr:hover {
+    background: #f8f9fa;
+}
+
+.user-type-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.user-type-badge.volunteer {
+    background: #d4edda;
+    color: #155724;
+}
+
+.user-type-badge.organization {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.user-type-badge.admin {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Reports styles */
+.reports-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.report-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.report-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.report-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.trend-item,
+.skill-item,
+.state-item,
+.verification-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.trend-count,
+.skill-count,
+.state-count,
+.verification-count {
+    font-weight: 600;
+    color: #dc3545;
+}
+
+/* User details styles */
+.user-details-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.user-basic-info,
+.user-skills-section,
+.user-assignments-section,
+.user-requests-section,
+.user-activity-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.user-basic-info h3,
+.user-skills-section h3,
+.user-assignments-section h3,
+.user-requests-section h3,
+.user-activity-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    color: #333;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.skill-card {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.skill-card.verified {
+    border-color: #28a745;
+}
+
+.skill-card.pending {
+    border-color: #ffc107;
+}
+
+.skill-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.skill-category {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.skill-level {
+    color: #dc3545;
+    font-weight: 500;
+    text-transform: capitalize;
+    margin-bottom: 5px;
+}
+
+.skill-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.assignments-list,
+.requests-list,
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.assignment-card,
+.request-card,
+.activity-item {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.assignment-title,
+.request-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.assignment-org,
+.assignment-status,
+.assignment-date,
+.request-priority,
+.request-volunteers,
+.request-status,
+.request-approved,
+.request-date {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.activity-action {
+    font-weight: 600;
+    color: #333;
+    text-transform: capitalize;
+    margin-bottom: 5px;
+}
+
+.activity-details {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.activity-date {
+    color: #999;
+    font-size: 0.8rem;
+}
+
+.loading,
+.error,
+.no-data {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.error {
+    color: #dc3545;
+}
+</style>
+{% endblock %}

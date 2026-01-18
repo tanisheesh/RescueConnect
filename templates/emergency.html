@@ -1,0 +1,1172 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Requests - RescueConnect{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1 id="pageTitle">Emergency Requests</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary" id="createRequestBtn" style="display: none;">
+                <i class="fas fa-plus"></i> Create Request
+            </button>
+            <button class="btn btn-secondary" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <div class="filters-section">
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label for="categoryFilter">Category</label>
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                    <!-- Categories will be loaded dynamically -->
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="stateFilter">State</label>
+                <select id="stateFilter">
+                    <option value="">All States</option>
+                    <option value="Andhra Pradesh">Andhra Pradesh</option>
+                    <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                    <option value="Assam">Assam</option>
+                    <option value="Bihar">Bihar</option>
+                    <option value="Chhattisgarh">Chhattisgarh</option>
+                    <option value="Goa">Goa</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Haryana">Haryana</option>
+                    <option value="Himachal Pradesh">Himachal Pradesh</option>
+                    <option value="Jharkhand">Jharkhand</option>
+                    <option value="Karnataka">Karnataka</option>
+                    <option value="Kerala">Kerala</option>
+                    <option value="Madhya Pradesh">Madhya Pradesh</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Manipur">Manipur</option>
+                    <option value="Meghalaya">Meghalaya</option>
+                    <option value="Mizoram">Mizoram</option>
+                    <option value="Nagaland">Nagaland</option>
+                    <option value="Odisha">Odisha</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Rajasthan">Rajasthan</option>
+                    <option value="Sikkim">Sikkim</option>
+                    <option value="Tamil Nadu">Tamil Nadu</option>
+                    <option value="Telangana">Telangana</option>
+                    <option value="Tripura">Tripura</option>
+                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                    <option value="Uttarakhand">Uttarakhand</option>
+                    <option value="West Bengal">West Bengal</option>
+                    <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                    <option value="Chandigarh">Chandigarh</option>
+                    <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                    <option value="Ladakh">Ladakh</option>
+                    <option value="Lakshadweep">Lakshadweep</option>
+                    <option value="Puducherry">Puducherry</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="priorityFilter">Priority</label>
+                <select id="priorityFilter">
+                    <option value="">All Priorities</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="statusFilter">Status</label>
+                <select id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="approved">Available</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="searchFilter">Search</label>
+                <input type="text" id="searchFilter" placeholder="Search requests...">
+            </div>
+        </div>
+    </div>
+    
+    <div class="emergency-requests-section">
+        <div class="section-header">
+            <h2>Emergency Requests</h2>
+            <div class="request-stats">
+                <span id="totalRequests">0 requests</span>
+            </div>
+        </div>
+        
+        <div class="emergency-list" id="emergencyList">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading emergency requests...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Request Modal -->
+<div id="createRequestModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create Emergency Request</h2>
+            <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+        </div>
+        <form id="createRequestForm" class="modal-form">
+            <div class="form-group">
+                <label for="requestTitle">Title *</label>
+                <input type="text" id="requestTitle" name="title" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="requestDescription">Description *</label>
+                <textarea id="requestDescription" name="description" rows="4" required></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="requestCategory">Category *</label>
+                    <select id="requestCategory" name="category_id" required>
+                        <option value="">Select category</option>
+                        <!-- Categories will be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="requestPriority">Priority *</label>
+                    <select id="requestPriority" name="priority_level" required>
+                        <option value="">Select priority</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="requestState">State *</label>
+                    <select id="requestState" name="state" required>
+                        <option value="">Select State</option>
+                        <option value="Andhra Pradesh">Andhra Pradesh</option>
+                        <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                        <option value="Assam">Assam</option>
+                        <option value="Bihar">Bihar</option>
+                        <option value="Chhattisgarh">Chhattisgarh</option>
+                        <option value="Goa">Goa</option>
+                        <option value="Gujarat">Gujarat</option>
+                        <option value="Haryana">Haryana</option>
+                        <option value="Himachal Pradesh">Himachal Pradesh</option>
+                        <option value="Jharkhand">Jharkhand</option>
+                        <option value="Karnataka">Karnataka</option>
+                        <option value="Kerala">Kerala</option>
+                        <option value="Madhya Pradesh">Madhya Pradesh</option>
+                        <option value="Maharashtra">Maharashtra</option>
+                        <option value="Manipur">Manipur</option>
+                        <option value="Meghalaya">Meghalaya</option>
+                        <option value="Mizoram">Mizoram</option>
+                        <option value="Nagaland">Nagaland</option>
+                        <option value="Odisha">Odisha</option>
+                        <option value="Punjab">Punjab</option>
+                        <option value="Rajasthan">Rajasthan</option>
+                        <option value="Sikkim">Sikkim</option>
+                        <option value="Tamil Nadu">Tamil Nadu</option>
+                        <option value="Telangana">Telangana</option>
+                        <option value="Tripura">Tripura</option>
+                        <option value="Uttar Pradesh">Uttar Pradesh</option>
+                        <option value="Uttarakhand">Uttarakhand</option>
+                        <option value="West Bengal">West Bengal</option>
+                        <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+                        <option value="Chandigarh">Chandigarh</option>
+                        <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+                        <option value="Ladakh">Ladakh</option>
+                        <option value="Lakshadweep">Lakshadweep</option>
+                        <option value="Puducherry">Puducherry</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="requestDistrict">District *</label>
+                    <input type="text" id="requestDistrict" name="district" required placeholder="Enter district">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="volunteersNeeded">Volunteers Needed</label>
+                <input type="number" id="volunteersNeeded" name="volunteers_needed" min="1" value="1">
+            </div>
+            
+            <div class="form-group">
+                <label for="requiredSkills">Required Skills</label>
+                <div id="skillsCheckboxes" class="skills-grid">
+                    <!-- Skills will be loaded dynamically -->
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startTime">Start Time</label>
+                    <input type="datetime-local" id="startTime" name="start_time">
+                </div>
+                <div class="form-group">
+                    <label for="endTime">End Time</label>
+                    <input type="datetime-local" id="endTime" name="end_time">
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Request Details Modal -->
+<div id="requestDetailsModal" class="modal" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2 id="detailsTitle">Request Details</h2>
+            <button class="modal-close" onclick="closeDetailsModal()">&times;</button>
+        </div>
+        <div id="requestDetailsContent">
+            <!-- Content will be loaded dynamically -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentUser = null;
+let allRequests = [];
+let allSkills = [];
+let allCategories = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
+    
+    currentUser = auth.getUser();
+    initializePage();
+    loadCategories();
+    loadSkills();
+    loadEmergencyRequests();
+    
+    // Check if there's a request parameter to auto-open
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestId = urlParams.get('request');
+    if (requestId) {
+        // Wait a bit for the page to load, then open the request details
+        setTimeout(() => {
+            viewRequestDetails(parseInt(requestId));
+        }, 1000);
+    }
+    
+    // Set up event listeners
+    document.getElementById('createRequestBtn').addEventListener('click', openCreateModal);
+    document.getElementById('refreshBtn').addEventListener('click', loadEmergencyRequests);
+    document.getElementById('createRequestForm').addEventListener('submit', createRequest);
+    
+    // Set up filters
+    document.getElementById('categoryFilter').addEventListener('change', filterRequests);
+    document.getElementById('stateFilter').addEventListener('change', filterRequests);
+    document.getElementById('priorityFilter').addEventListener('change', filterRequests);
+    document.getElementById('statusFilter').addEventListener('change', filterRequests);
+    document.getElementById('searchFilter').addEventListener('input', debounce(filterRequests, 300));
+});
+
+async function loadCategories() {
+    try {
+        const response = await apiCall('/api/categories?type=disaster');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allCategories = data.categories;
+            populateCategoryFilters();
+            populateCategoryDropdown();
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error);
+    }
+}
+
+function populateCategoryFilters() {
+    const filterSelect = document.getElementById('categoryFilter');
+    allCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.name;
+        filterSelect.appendChild(option);
+    });
+}
+
+function populateCategoryDropdown() {
+    const categorySelect = document.getElementById('requestCategory');
+    allCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.name;
+        categorySelect.appendChild(option);
+    });
+}
+
+function initializePage() {
+    if (currentUser.user_type === 'organization' || currentUser.user_type === 'admin') {
+        document.getElementById('createRequestBtn').style.display = 'block';
+        document.getElementById('pageTitle').textContent = 'My Emergency Requests';
+    } else {
+        document.getElementById('pageTitle').textContent = 'Available Emergency Requests';
+    }
+}
+
+async function loadSkills() {
+    try {
+        const response = await apiCall('/api/skills');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allSkills = Object.values(data.skills).flat();
+            populateSkillsCheckboxes();
+        }
+    } catch (error) {
+        console.error('Error loading skills:', error);
+    }
+}
+
+function populateSkillsCheckboxes() {
+    const container = document.getElementById('skillsCheckboxes');
+    container.innerHTML = allSkills.map(skill => `
+        <label class="skill-checkbox">
+            <input type="checkbox" value="${skill.id}" name="requiredSkills">
+            <span>${skill.name}</span>
+        </label>
+    `).join('');
+}
+
+async function loadEmergencyRequests() {
+    try {
+        const response = await apiCall('/api/emergency/requests');
+        const data = await response.json();
+        
+        if (response.ok) {
+            allRequests = data.requests;
+            displayRequests(allRequests);
+            updateRequestStats();
+        } else {
+            showNotification('Failed to load emergency requests', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load emergency requests');
+    }
+}
+
+function displayRequests(requests) {
+    const container = document.getElementById('emergencyList');
+    
+    if (requests.length === 0) {
+        container.innerHTML = '<div class="no-data">No emergency requests found</div>';
+        return;
+    }
+    
+    container.innerHTML = requests.map(request => `
+        <div class="emergency-item priority-${request.priority_level}">
+            <div class="emergency-header">
+                <h3>${request.title}</h3>
+                <div class="header-badges">
+                    <span class="priority-badge priority-${request.priority_level}">${request.priority_level.toUpperCase()}</span>
+                    <span class="status-badge status-${request.status}">${request.status.replace('_', ' ').toUpperCase()}</span>
+                </div>
+            </div>
+            <div class="emergency-details">
+                <p>${request.description}</p>
+                <div class="emergency-meta">
+                    <span><i class="fas fa-building"></i> ${request.organization_name}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> ${request.state}, ${request.district}</span>
+                    <span><i class="fas fa-users"></i> ${request.volunteers_assigned}/${request.volunteers_needed} volunteers</span>
+                    <span><i class="fas fa-clock"></i> ${formatRelativeTime(request.created_at)}</span>
+                    ${request.category_name ? `<span><i class="fas fa-tag"></i> ${request.category_name}</span>` : ''}
+                </div>
+                ${request.required_skills ? `<div class="required-skills">
+                    <strong>Required Skills:</strong> ${request.required_skills}
+                </div>` : ''}
+            </div>
+            <div class="emergency-actions">
+                <button class="btn btn-primary btn-small" onclick="viewRequestDetails(${request.id})">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+                ${currentUser.user_type === 'volunteer' && (request.status === 'approved' || request.status === 'active') ? `
+                    <button class="btn btn-success btn-small" onclick="expressInterest(${request.id})">
+                        <i class="fas fa-hand-paper"></i> I'm Interested
+                    </button>
+                ` : ''}
+                ${currentUser.user_type === 'admin' && request.status === 'pending' ? `
+                    <button class="btn btn-success btn-small" onclick="approveRequest(${request.id})">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterRequests() {
+    const category = document.getElementById('categoryFilter').value;
+    const state = document.getElementById('stateFilter').value;
+    const priority = document.getElementById('priorityFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const search = document.getElementById('searchFilter').value.toLowerCase();
+    
+    let filtered = allRequests.filter(request => {
+        if (category && request.category_id != category) return false;
+        if (state && request.state !== state) return false;
+        if (priority && request.priority_level !== priority) return false;
+        if (status && request.status !== status) return false;
+        if (search && !request.title.toLowerCase().includes(search) && 
+            !request.description.toLowerCase().includes(search)) return false;
+        
+        return true;
+    });
+    
+    displayRequests(filtered);
+    updateRequestStats(filtered.length);
+}
+
+function updateRequestStats(count = null) {
+    const total = count !== null ? count : allRequests.length;
+    document.getElementById('totalRequests').textContent = `${total} request${total !== 1 ? 's' : ''}`;
+}
+
+function openCreateModal() {
+    const modal = document.getElementById('createRequestModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeCreateModal() {
+    const modal = document.getElementById('createRequestModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.getElementById('createRequestForm').reset();
+    }, 300);
+}
+
+function getLocationForRequest() {
+    getCurrentLocation()
+        .then(location => {
+            document.getElementById('requestLatitude').value = location.latitude;
+            document.getElementById('requestLongitude').value = location.longitude;
+            showNotification('Location obtained successfully!', 'success');
+        })
+        .catch(error => {
+            showNotification(error.message, 'error');
+        });
+}
+
+async function createRequest(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    // Get selected skills
+    const selectedSkills = Array.from(document.querySelectorAll('input[name="requiredSkills"]:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    data.required_skills = selectedSkills;
+    data.latitude = parseFloat(data.latitude);
+    data.longitude = parseFloat(data.longitude);
+    data.volunteers_needed = parseInt(data.volunteers_needed) || 1;
+    
+    try {
+        const response = await apiCall('/api/emergency/requests', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Emergency request created successfully!', 'success');
+            closeCreateModal();
+            loadEmergencyRequests();
+        } else {
+            showNotification(result.error || 'Failed to create request', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to create request');
+    }
+}
+
+async function viewRequestDetails(requestId) {
+    try {
+        const response = await apiCall(`/api/emergency/requests/${requestId}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayRequestDetails(data);
+            const modal = document.getElementById('requestDetailsModal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+        } else {
+            showNotification('Failed to load request details', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to load request details');
+    }
+}
+
+function displayRequestDetails(data) {
+    const request = data.request;
+    const assignments = data.assignments || [];
+    const requiredSkills = data.required_skills || [];
+    const userApplication = data.user_application;
+    
+    document.getElementById('detailsTitle').textContent = request.title;
+    
+    // Check if user can volunteer (for volunteers only)
+    let canVolunteer = false;
+    let applicationStatus = null;
+    
+    if (currentUser.user_type === 'volunteer' && (request.status === 'approved' || request.status === 'active')) {
+        if (userApplication) {
+            applicationStatus = userApplication.status;
+            canVolunteer = false; // Already applied
+        } else {
+            canVolunteer = true; // Can apply
+        }
+    }
+    
+    const content = document.getElementById('requestDetailsContent');
+    content.innerHTML = `
+        <div class="request-details">
+            <div class="detail-section">
+                <h3>Request Information</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Priority:</label>
+                        <span class="priority-badge priority-${request.priority_level}">${request.priority_level.toUpperCase()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Status:</label>
+                        <span class="status-badge status-${request.status}">${request.status.replace('_', ' ').toUpperCase()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Organization:</label>
+                        <span>${request.organization_name}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Volunteers:</label>
+                        <span>${request.volunteers_assigned}/${request.volunteers_needed}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Category:</label>
+                        <span>${request.category_name || 'Not specified'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Created:</label>
+                        <span>${formatDate(request.created_at)}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Description</h3>
+                <p>${request.description}</p>
+            </div>
+            
+            <div class="detail-section">
+                <h3>Location</h3>
+                <p><i class="fas fa-map-marker-alt"></i> ${request.state}, ${request.district}</p>
+                ${request.address ? `<p><strong>Address:</strong> ${request.address}</p>` : ''}
+            </div>
+            
+            ${request.start_time || request.end_time ? `
+                <div class="detail-section">
+                    <h3>Timeline</h3>
+                    ${request.start_time ? `<p><strong>Start:</strong> ${formatDateTime(request.start_time)}</p>` : ''}
+                    ${request.end_time ? `<p><strong>End:</strong> ${formatDateTime(request.end_time)}</p>` : ''}
+                </div>
+            ` : ''}
+            
+            ${requiredSkills.length > 0 ? `
+                <div class="detail-section">
+                    <h3>Required Skills</h3>
+                    <div class="skills-list">
+                        ${requiredSkills.map(skill => `
+                            <span class="skill-tag">${skill.name}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${currentUser.user_type === 'volunteer' && (request.status === 'approved' || request.status === 'active') ? `
+                <div class="detail-section">
+                    <h3>Volunteer Interest</h3>
+                    <div class="volunteer-actions">
+                        ${canVolunteer ? `
+                            <button class="btn btn-success" onclick="expressInterest(${request.id})">
+                                <i class="fas fa-hand-paper"></i> I am interested in volunteering
+                            </button>
+                            <p class="volunteer-note">
+                                <i class="fas fa-info-circle"></i>
+                                Your interest will be sent to the organization for review. They will contact you if selected.
+                            </p>
+                        ` : applicationStatus ? `
+                            <div class="application-status status-${applicationStatus}">
+                                <div class="status-header">
+                                    <i class="fas fa-${applicationStatus === 'pending' ? 'clock' : applicationStatus === 'approved' ? 'check-circle' : 'times-circle'}"></i>
+                                    <span>Application ${applicationStatus === 'pending' ? 'Submitted' : applicationStatus === 'approved' ? 'Approved' : 'Rejected'}</span>
+                                </div>
+                                <p class="status-message">
+                                    ${applicationStatus === 'pending' ? 'Your application is being reviewed by the organization.' : 
+                                      applicationStatus === 'approved' ? 'Congratulations! Your application has been approved. The organization will contact you soon.' :
+                                      'Your application was not selected for this emergency request.'}
+                                </p>
+                                ${userApplication.response_message ? `
+                                    <p class="org-message">"${userApplication.response_message}"</p>
+                                ` : ''}
+                                <div class="application-details">
+                                    <small>Applied: ${formatRelativeTime(userApplication.applied_at)}</small>
+                                    ${userApplication.responded_at ? `<small>Responded: ${formatRelativeTime(userApplication.responded_at)}</small>` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${assignments.length > 0 ? `
+                <div class="detail-section">
+                    <h3>Assigned Volunteers (${assignments.length})</h3>
+                    <div class="assignments-list">
+                        ${assignments.map(assignment => `
+                            <div class="assignment-item">
+                                <div class="volunteer-info">
+                                    <span class="volunteer-name">${assignment.full_name}</span>
+                                    <span class="volunteer-email">${assignment.email || ''}</span>
+                                </div>
+                                <span class="assignment-status status-${assignment.status}">${assignment.status.toUpperCase()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${currentUser.user_type === 'admin' && request.status === 'pending' ? `
+                <div class="detail-section">
+                    <h3>Admin Actions</h3>
+                    <div class="admin-actions">
+                        <button class="btn btn-success" onclick="approveRequest(${request.id})">
+                            <i class="fas fa-check"></i> Approve Request
+                        </button>
+                        <button class="btn btn-danger" onclick="rejectRequest(${request.id})">
+                            <i class="fas fa-times"></i> Reject Request
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function closeDetailsModal() {
+    const modal = document.getElementById('requestDetailsModal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function expressInterest(requestId) {
+    try {
+        const response = await apiCall(`/api/emergency/requests/${requestId}/interest`, {
+            method: 'POST',
+            body: JSON.stringify({
+                message: 'I am interested in volunteering for this emergency request.'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Interest expressed successfully! The organization will review your application.', 'success');
+            closeDetailsModal();
+            loadEmergencyRequests(); // Refresh the list
+        } else {
+            showNotification(result.error || 'Failed to express interest', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to express interest');
+    }
+}
+
+async function approveRequest(requestId) {
+    if (!confirm('Are you sure you want to approve this emergency request?')) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/admin/approve-request/${requestId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ action: 'approve' })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Request approved successfully!', 'success');
+            closeDetailsModal();
+            loadEmergencyRequests();
+        } else {
+            showNotification(result.error || 'Failed to approve request', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to approve request');
+    }
+}
+
+async function rejectRequest(requestId) {
+    if (!confirm('Are you sure you want to reject this emergency request? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/admin/approve-request/${requestId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ action: 'reject' })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Request rejected successfully!', 'success');
+            closeDetailsModal();
+            loadEmergencyRequests();
+        } else {
+            showNotification(result.error || 'Failed to reject request', 'error');
+        }
+    } catch (error) {
+        handleApiError(error, 'Failed to reject request');
+    }
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', function(e) {
+    const createModal = document.getElementById('createRequestModal');
+    const detailsModal = document.getElementById('requestDetailsModal');
+    
+    if (e.target === createModal) {
+        closeCreateModal();
+    }
+    if (e.target === detailsModal) {
+        closeDetailsModal();
+    }
+});
+</script>
+
+<style>
+.filters-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+}
+
+.filter-group input,
+.filter-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 5px;
+    font-size: 0.9rem;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.7);
+    transition: transform 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-large {
+    max-width: 900px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-form {
+    padding: 20px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.skill-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-badge.status-open {
+    background: #28a745;
+    color: white;
+}
+
+.status-badge.status-in_progress {
+    background: #ffc107;
+    color: #333;
+}
+
+.status-badge.status-completed {
+    background: #6c757d;
+    color: white;
+}
+
+.header-badges {
+    display: flex;
+    gap: 10px;
+}
+
+.request-details {
+    padding: 20px;
+}
+
+.detail-section {
+    margin-bottom: 30px;
+}
+
+.detail-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 5px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.assignments-list {
+    display: grid;
+    gap: 10px;
+}
+
+.assignment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.volunteer-name {
+    font-weight: 600;
+}
+
+.skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.skill-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.volunteer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.volunteer-note {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 4px solid #17a2b8;
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.volunteer-note i {
+    color: #17a2b8;
+    margin-right: 8px;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.assignment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
+}
+
+.volunteer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.volunteer-email {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.status-approved {
+    background: #28a745;
+    color: white;
+}
+
+.status-pending {
+    background: #ffc107;
+    color: #333;
+}
+
+.status-rejected {
+    background: #dc3545;
+    color: white;
+}
+
+.status-active {
+    background: #17a2b8;
+    color: white;
+}
+
+.status-completed {
+    background: #6c757d;
+    color: white;
+}
+
+/* Application Status Styles */
+.application-status {
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid;
+    margin: 10px 0;
+}
+
+.application-status.status-pending {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.application-status.status-approved {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.application-status.status-rejected {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.status-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+}
+
+.status-message {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.org-message {
+    background: rgba(0,0,0,0.1);
+    padding: 8px;
+    border-radius: 5px;
+    font-style: italic;
+    margin: 8px 0;
+}
+
+.application-details {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+/* Status and Priority Badge Styles */
+.status-badge, .priority-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+/* Status Badge Colors */
+.status-badge.status-pending {
+    background: #ffc107;
+    color: #212529;
+}
+
+.status-badge.status-approved {
+    background: #28a745;
+    color: white;
+}
+
+.status-badge.status-active {
+    background: #17a2b8;
+    color: white;
+}
+
+.status-badge.status-completed {
+    background: #6c757d;
+    color: white;
+}
+
+.status-badge.status-rejected {
+    background: #dc3545;
+    color: white;
+}
+
+/* Priority Badge Colors */
+.priority-badge.priority-low {
+    background: #28a745;
+    color: white;
+}
+
+.priority-badge.priority-medium {
+    background: #ffc107;
+    color: #212529;
+}
+
+.priority-badge.priority-high {
+    background: #fd7e14;
+    color: white;
+}
+
+.priority-badge.priority-critical {
+    background: #dc3545;
+    color: white;
+}
+</style>
+{% endblock %}

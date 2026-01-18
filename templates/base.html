@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RescueConnect - Connecting Communities in Crisis{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤝</text></svg>">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-hands-helping"></i>
+                <span>RescueConnect</span>
+            </div>
+            <div class="nav-menu" id="navMenu">
+                <a href="/" class="nav-link">Home</a>
+                <a href="/dashboard" class="nav-link" id="dashboardLink" style="display: none;">Dashboard</a>
+                <a href="/emergency" class="nav-link" id="emergencyLink" style="display: none;">Emergencies</a>
+                <a href="/skills" class="nav-link" id="skillsLink" style="display: none;">Skills</a>
+                <a href="/login" class="nav-link" id="loginLink">Login</a>
+                <a href="/register" class="nav-link" id="registerLink">Register</a>
+                <a href="#" class="nav-link" id="logoutLink" style="display: none;" onclick="logout()">Logout</a>
+            </div>
+            <div class="nav-toggle" id="navToggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <i class="fas fa-hands-helping"></i>
+                        <span>RescueConnect</span>
+                    </div>
+                    <p class="footer-tagline">Connecting Communities in Crisis</p>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <div class="footer-copyright">
+                    <p>&copy; 2026 RescueConnect. Built for community safety with <i class="fas fa-heart" style="color: #e74c3c;"></i> by <a href="https://github.com/tanisheesh" target="_blank" rel="noopener noreferrer">Tanish Poddar</a></p>
+                </div>
+                <div class="footer-social">
+                    <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-facebook"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
+                    <a href="https://github.com/realrichelle19" class="social-link"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+    
+    <style>
+    /* Footer Styles */
+    .footer {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: white;
+        padding: 60px 0 20px;
+        margin-top: auto;
+    }
+    
+    .footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    
+    .footer-content {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 40px;
+    }
+    
+    .footer-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .footer-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+    
+    .footer-logo i {
+        color: #ffd700;
+        font-size: 2rem;
+    }
+    
+    .footer-tagline {
+        color: #bdc3c7;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+    
+    .footer-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 30px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+    
+    .footer-copyright {
+        color: #bdc3c7;
+        font-size: 0.9rem;
+    }
+    
+    .footer-copyright a {
+        color: #ffd700;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+    
+    .footer-copyright a:hover {
+        color: #ffed4e;
+    }
+    
+    .footer-social {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .social-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        color: #bdc3c7;
+        text-decoration: none;
+        transition: all 0.3s;
+        font-size: 1.1rem;
+    }
+    
+    .social-link:hover {
+        background: #ffd700;
+        color: #2c3e50;
+        transform: translateY(-3px);
+    }
+    
+    /* Responsive Footer */
+    @media (max-width: 768px) {
+        .footer-content {
+            text-align: center;
+        }
+        
+        .footer-bottom {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .footer {
+            padding: 40px 0 20px;
+        }
+    }
+    
+    /* Ensure footer stays at bottom */
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    
+    .main-content {
+        flex: 1;
+    }
+    </style>
+</body>
+</html>
